@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import Counter from '$lib/Counter.svelte';
 	import Image from '$lib/Image.svelte';
+	import Button from '$lib/Button.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let name = 'Adams';
@@ -26,6 +27,13 @@
 	}
 
 	let enteredNumber = $derived(getNumberName(number - 1));
+	let total = $derived(numbers.reduce((num, cur) => num + cur, 0));
+
+	const handleButtonClick = () => {
+		if (numbers.length > 10) return;
+		const lastIndex = numbers.at(-1);
+		if (lastIndex) numbers.push(lastIndex + 1);
+	};
 </script>
 
 <h1>Welcome to SvelteKit</h1>
@@ -42,3 +50,5 @@
 <p>You entered {enteredNumber}</p>
 <Counter />
 <Image height={50} width={90} />
+<Button title="Add new number" onclick={handleButtonClick} />
+<Button title={String(total)} />
