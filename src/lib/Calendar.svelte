@@ -184,8 +184,12 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="min-w-[300px] font-sans" onmouseleave={handleDragEnd} onmouseup={handleMouseUp}>
-	<div class="flex items-center justify-between bg-white p-4">
+<div
+	class="min-w-[300px] overflow-hidden rounded-3xl font-sans text-white/80"
+	onmouseleave={handleDragEnd}
+	onmouseup={handleMouseUp}
+>
+	<div class="flex items-center justify-between p-4">
 		<h2 class="text-lg font-semibold">
 			{months[currentDate.getMonth()]}
 			{currentDate.getFullYear()}
@@ -193,31 +197,31 @@
 		<div>
 			<button
 				onclick={prevMonth}
-				class="cursor-pointer rounded-full border-none bg-white px-4 py-2 hover:bg-gray-50"
+				class="cursor-pointer rounded-full border-none px-4 py-2 hover:bg-[#1e2c3b]/50"
 			>
 				&lt;
 			</button>
 			<button
 				onclick={nextMonth}
-				class="cursor-pointer rounded-full border-none bg-white px-4 py-2 hover:bg-gray-50"
+				class="cursor-pointer rounded-full border-none px-4 py-2 hover:bg-[#1e2c3b]/50"
 			>
 				&gt;
 			</button>
 		</div>
 	</div>
 
-	<div class="grid grid-cols-7 bg-white p-2 text-center">
+	<div class="grid grid-cols-7 p-2 text-center">
 		{#each weekDays as day}
 			<div class="text-sm font-bold">{day}</div>
 		{/each}
 	</div>
 
-	<div class="grid grid-cols-7 gap-[1px] bg-gray-300">
+	<div class="grid grid-cols-7 gap-[1px]">
 		{#each days as { date, isCurrentMonth, isToday, month, year } (date + '' + isCurrentMonth + '' + isToday + '' + month + '' + year)}
 			<button
 				class="
-          cursor-pointer rounded bg-white/60 p-2 text-center text-xs hover:bg-gray-100
-          {!isCurrentMonth ? 'text-gray-400' : ''}
+          cursor-pointer rounded p-2 text-center text-xs hover:bg-[#1e2c3b]/50
+          {!isCurrentMonth ? 'text-gray-600' : ''}
           {selectedDates.some(
 					(selectedDate) =>
 						selectedDate.getDate() === date &&
@@ -231,13 +235,14 @@
 				onmouseenter={() => handleDragMove(date, month, year, isCurrentMonth)}
 				onmouseup={handleDragEnd}
 			>
-				<p
-					class="h-6 w-6 rounded-full p-1 {isToday && isCurrentMonth
-						? '!bg-black/70 text-white hover:bg-black/60'
+				<div
+					class="flex h-6 w-6 items-center justify-center rounded-full p-2 {isToday &&
+					isCurrentMonth
+						? '!bg-[#1e2c3b] text-white hover:bg-black/60'
 						: ''}"
 				>
 					{date}
-				</p>
+				</div>
 			</button>
 		{/each}
 	</div>

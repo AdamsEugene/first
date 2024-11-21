@@ -160,50 +160,54 @@
 	});
 </script>
 
-<div class="w-full">
-	<div
-		class="grid h-[8vh] p-2 text-center"
-		style="grid-template-columns: repeat({colCount()}, minmax(0, 1fr))"
-	>
-		{#each weekDays as day}
-			<div class="flex items-center justify-center font-bold">{day}</div>
-		{/each}
-	</div>
+<div class="flex w-full flex-col gap-4 text-white/80">
+	<div class="h-14">something</div>
 
-	<div
-		class="grid h-[87vh]"
-		style="grid-template-rows: repeat({rowCount()}, 1fr); grid-template-columns: repeat({colCount()}, minmax(0, 1fr))"
-	>
-		{#if generatedDays.length > 0}
-			{#each generatedDays as day (dayKey(day))}
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div
-					class="
-            group flex cursor-pointer items-center
-            justify-center rounded-xl border border-gray-300 bg-white
-            p-2 transition-[background-color,transform,box-shadow] duration-300
-            ease-in-out hover:scale-[0.97] hover:bg-[#1e2c3b]/20
-            hover:shadow-lg
-            {day.isToday && day.isCurrentMonth ? 'bg-black/70 text-white' : ''}
-			{selectedDate === dayKey(day) ? 'scale-[0.9] !bg-[#1e2c3b]/90 text-white' : ''}
-          "
-					onclick={(e) => setSelectedDate(day, e)}
-				>
-					<p
-						class="flex h-14 w-14 items-center justify-center rounded-full p-4
-            font-medium
-            transition-transform duration-300 ease-in-out
-            group-hover:text-white
-            {day.isToday && day.isCurrentMonth ? 'bg-black/70 text-white' : ''}"
-					>
-						{day.date}
-					</p>
-				</div>
+	<div class="w-full overflow-clip rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90">
+		<!-- <div
+			class="grid h-[8vh] p-2 text-center text-white"
+			style="grid-template-columns: repeat({colCount()}, minmax(0, 1fr))"
+		>
+			{#each weekDays as day}
+				<div class="flex items-center justify-center font-bold">{day}</div>
 			{/each}
-		{:else}
-			<div class="loading">Loading...</div>
-		{/if}
+		</div> -->
+
+		<div
+			class="grid h-[calc(95vh-74px)]"
+			style="grid-template-rows: repeat({rowCount()}, 1fr); grid-template-columns: repeat({colCount()}, minmax(0, 1fr))"
+		>
+			{#if generatedDays.length > 0}
+				{#each generatedDays as day, index (dayKey(day))}
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						class="group flex w-full
+				 cursor-pointer flex-col
+				rounded-xl border border-[#1e2c3b] p-2
+				text-white/80 transition-[background-color,transform,box-shadow] duration-300
+				ease-in-out hover:scale-[0.97] hover:bg-[#1e2c3b]/20
+				hover:shadow-lg
+				{selectedDate === dayKey(day) ? '!bg-[#1e2c3b]/20 text-white' : ''}
+			  "
+						onclick={(e) => setSelectedDate(day, e)}
+					>
+						<div class="flex w-full justify-center">{weekDays[index]}</div>
+						<div
+							class="flex h-14 w-14 items-center justify-center rounded-full p-4 text-center
+				font-medium
+				transition-transform duration-300 ease-in-out
+				group-hover:text-white
+				{day.isToday && day.isCurrentMonth ? 'bg-black/70 text-white' : ''}"
+						>
+							{day.date}
+						</div>
+					</div>
+				{/each}
+			{:else}
+				<div class="loading">Loading...</div>
+			{/if}
+		</div>
 	</div>
 </div>
 
