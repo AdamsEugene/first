@@ -13,8 +13,8 @@
 
 	let today = new Date();
 	let currentDate = $state(new Date());
-	let currentMonth: number = $state(4);
-	let currentYear: number = $state(2024);
+	let currentMonth: number = $state(today.getMonth());
+	let currentYear: number = $state(today.getFullYear());
 	let days: Array<DAYS> = $state([]);
 
 	let isDragging = $state(false);
