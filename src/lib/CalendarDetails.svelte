@@ -88,22 +88,24 @@
 	});
 </script>
 
-<div class="weekdays">
-	{#each weekDays as day}
-		<div class="weekday">{day}</div>
-	{/each}
-</div>
-
-<div class="days">
-	{#if generatedDays.length > 0}
-		{#each generatedDays as day (dayKey(day))}
-			<div class="day" class:is-today={day.isToday && day.isCurrentMonth}>
-				{day.date}
-			</div>
+<div class="w-full">
+	<div class="weekdays">
+		{#each weekDays as day}
+			<div class="weekday">{day}</div>
 		{/each}
-	{:else}
-		<div class="loading">Loading...</div>
-	{/if}
+	</div>
+
+	<div class="days">
+		{#if generatedDays.length > 0}
+			{#each generatedDays as day (dayKey(day))}
+				<div class="day" class:is-today={day.isToday && day.isCurrentMonth}>
+					{day.date}
+				</div>
+			{/each}
+		{:else}
+			<div class="loading">Loading...</div>
+		{/if}
+	</div>
 </div>
 
 <style>
@@ -113,23 +115,35 @@
 		text-align: center;
 		padding: 0.5rem;
 		background-color: #e0e0e0;
+		height: 8vh; /* Added fixed height for header */
 	}
 
 	.weekday {
 		font-weight: bold;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.days {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
+		grid-template-rows: repeat(6, 1fr); /* Added to ensure 6 equal rows */
 		gap: 1px;
 		text-align: center;
-		padding: 0.5rem;
 		background-color: #ddd;
+		height: 92vh; /* Takes remaining viewport height */
+		padding: 1px; /* Reduced padding to maximize space */
 	}
 
 	.day {
 		padding: 0.5rem;
+		border: 1px solid #ccc;
+		background-color: white;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		/* Removed fixed height to allow grid to control sizing */
 	}
 
 	.day:global(.is-today) {

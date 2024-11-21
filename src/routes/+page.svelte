@@ -66,5 +66,10 @@
 <!-- <Image height={50} width={90} /> -->
 <!-- <Button title="Add new number" onclick={handleButtonClick} /> -->
 <!-- <Button title={String(total)} /> -->
-<Calendar onDateSelect={handleDateSelect} />
-<CalendarDetails {selectedDates} />
+<div class="flex">
+	<Calendar onDateSelect={handleDateSelect} />
+	<CalendarDetails {selectedDates} />
+</div>
+
+<style>
+</style>

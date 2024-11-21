@@ -208,9 +208,7 @@
 
 <style>
 	.calendar {
-		width: 100%;
-		max-width: 400px;
-		margin: 0 auto;
+		min-width: 300px;
 		font-family: Arial, sans-serif;
 	}
 
