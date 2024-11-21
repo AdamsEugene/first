@@ -8,7 +8,13 @@ export default {
 	content: ['./src/**/*.{html,js,svelte,ts}'],
 
 	theme: {
-		extend: {}
+		extend: {
+			extend: {
+				colors: {
+					'calendar-select': '#1e2c3b'
+				}
+			}
+		}
 	},
 
 	plugins: [typography, forms, containerQueries, aspectRatio]

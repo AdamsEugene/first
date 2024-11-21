@@ -171,118 +171,61 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="calendar" onmouseleave={handleDragEnd} onmouseup={handleMouseUp}>
-	<div class="calendar-header">
-		<button onclick={prevMonth}>&lt;</button>
-		<h2>{months[currentDate.getMonth()]} {currentDate.getFullYear()}</h2>
-		<button onclick={nextMonth}>&gt;</button>
+<div class="min-w-[300px] font-sans" onmouseleave={handleDragEnd} onmouseup={handleMouseUp}>
+	<div class="flex items-center justify-between bg-white p-4">
+		<h2 class="text-lg font-semibold">
+			{months[currentDate.getMonth()]}
+			{currentDate.getFullYear()}
+		</h2>
+		<div>
+			<button
+				onclick={prevMonth}
+				class="cursor-pointer rounded-full border-none bg-white px-4 py-2 hover:bg-gray-50"
+			>
+				&lt;
+			</button>
+			<button
+				onclick={nextMonth}
+				class="cursor-pointer rounded-full border-none bg-white px-4 py-2 hover:bg-gray-50"
+			>
+				&gt;
+			</button>
+		</div>
 	</div>
 
-	<div class="weekdays">
+	<div class="grid grid-cols-7 bg-white p-2 text-center">
 		{#each weekDays as day}
-			<div class="weekday">{day}</div>
+			<div class="text-sm font-bold">{day}</div>
 		{/each}
 	</div>
 
-	<div class="days">
+	<div class="grid grid-cols-7 gap-[1px] bg-gray-300">
 		{#each days as { date, isCurrentMonth, isToday, month, year } (date + '' + isCurrentMonth + '' + isToday + '' + month + '' + year)}
 			<button
-				class="day"
-				class:current-month={isCurrentMonth}
-				class:is-today={isToday && isCurrentMonth}
-				class:selected={selectedDates.some(
+				class="
+          cursor-pointer rounded bg-white/60 p-2 text-center text-xs hover:bg-gray-100
+          {!isCurrentMonth ? 'text-gray-400' : ''}
+          {selectedDates.some(
 					(selectedDate) =>
 						selectedDate.getDate() === date &&
 						selectedDate.getMonth() === month &&
 						selectedDate.getFullYear() === year
-				)}
+				)
+					? '!bg-[#1e2c3b] text-white hover:bg-[#1e2c3b]/90'
+					: ''}
+        "
 				onmousedown={() => handleDragStart(date, month, year, isCurrentMonth)}
 				onmouseenter={() => handleDragMove(date, month, year, isCurrentMonth)}
 				onmouseup={handleDragEnd}
 			>
-				{date}
+				<p
+					class="h-6 w-6 rounded-full p-1 {isToday && isCurrentMonth
+						? '!bg-black/70 text-white hover:bg-black/60'
+						: ''}"
+				>
+					{date}
+				</p>
 			</button>
 		{/each}
 	</div>
 </div>
-
-<style>
-	.calendar {
-		min-width: 300px;
-		font-family: Arial, sans-serif;
-	}
-
-	.calendar-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1rem;
-		background-color: #f0f0f0;
-	}
-
-	.calendar-header button {
-		padding: 0.5rem 1rem;
-		border: none;
-		background-color: #fff;
-		cursor: pointer;
-	}
-
-	.weekdays {
-		display: grid;
-		grid-template-columns: repeat(7, 1fr);
-		text-align: center;
-		padding: 0.5rem;
-		background-color: #e0e0e0;
-	}
-
-	.weekday {
-		font-weight: bold;
-	}
-
-	.days {
-		display: grid;
-		grid-template-columns: repeat(7, 1fr);
-		gap: 1px;
-		background-color: #ddd;
-	}
-
-	.day {
-		padding: 0.5rem;
-		text-align: center;
-		background-color: #fff;
-		cursor: pointer;
-		border-radius: 4px;
-	}
-
-	.day:global(:not(.current-month)) {
-		color: #999;
-	}
-
-	.day:global(.is-today) {
-		background-color: #000000AB;
-		color: white !important;
-	}
-
-	.day:hover {
-		background-color: #f0f0f0;
-	}
-
-	.selected {
-		background-color: #1e2c3bff;
-		color: white !important;
-	}
-
-	.selected:hover {
-		background-color: #1e2c3bdb;
-	}
-
-	.day:global(.in-range) {
-		background-color: #e6f3ff;
-	}
-
-	.day:global(.drag-start),
-	.day:global(.drag-end) {
-		background-color: #007bff;
-		color: white;
-	}
-</style>
