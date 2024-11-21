@@ -251,6 +251,7 @@
 		text-align: center;
 		background-color: #fff;
 		cursor: pointer;
+		border-radius: 4px;
 	}
 
 	.day:global(:not(.current-month)) {
@@ -258,8 +259,8 @@
 	}
 
 	.day:global(.is-today) {
-		background-color: greenyellow;
-		border-radius: 50%;
+		background-color: #000000AB;
+		color: white !important;
 	}
 
 	.day:hover {
@@ -267,12 +268,12 @@
 	}
 
 	.selected {
-		background-color: #007bff;
+		background-color: #1e2c3bff;
 		color: white !important;
 	}
 
 	.selected:hover {
-		background-color: #0056b3;
+		background-color: #1e2c3bdb;
 	}
 
 	.day:global(.in-range) {
@@ -283,6 +284,5 @@
 	.day:global(.drag-end) {
 		background-color: #007bff;
 		color: white;
-		border-radius: 50%;
 	}
 </style>

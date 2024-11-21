@@ -43,6 +43,7 @@
 		const firstDay = new Date(year, month, 1);
 		const lastDay = new Date(year, month + 1, 0);
 		const prevMonthLastDay = new Date(year, month, 0);
+		const nextMonthFirstDay = new Date(year, month + 1, 1);
 
 		const isThisMonth = year === today.getFullYear() && month === today.getMonth();
 
@@ -67,6 +68,18 @@
 				isToday: isThisMonth && i === today.getDate(),
 				month,
 				year
+			});
+		}
+
+		// Add next month's days
+		const remainingDays = 35 - calendarDays.length;
+		for (let i = 1; i <= remainingDays; i++) {
+			calendarDays.push({
+				date: i,
+				isCurrentMonth: false,
+				isToday: isThisMonth && i === today.getDate(),
+				month: nextMonthFirstDay.getMonth(),
+				year: nextMonthFirstDay.getFullYear()
 			});
 		}
 
@@ -143,11 +156,13 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		border-radius: 12px;
 		/* Removed fixed height to allow grid to control sizing */
 	}
 
 	.day:global(.is-today) {
-		background-color: rgb(140, 234, 232);
-		border-radius: 50%;
+		background-color: #000000ab;
+		color: #fff;
+		/* border-radius: 50%; */
 	}
 </style>
