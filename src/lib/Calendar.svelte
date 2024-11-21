@@ -135,12 +135,25 @@
 		const start = dragStart < dragEnd ? dragStart : dragEnd;
 		const end = dragStart < dragEnd ? dragEnd : dragStart;
 
-		const dates: Date[] = [];
+		let dates: Date[] = [];
 		const currentDate = new Date(start);
 
+		// Get initial selection
 		while (currentDate <= end) {
 			dates.push(new Date(currentDate));
 			currentDate.setDate(currentDate.getDate() + 1);
+		}
+
+		// Extend to next multiple of 7 if needed
+		if (dates.length > 7) {
+			const daysNeeded = Math.ceil(dates.length / 7) * 7;
+			const lastDate = dates[dates.length - 1];
+
+			while (dates.length < daysNeeded) {
+				const nextDate = new Date(lastDate);
+				nextDate.setDate(lastDate.getDate() + (dates.length - dates.indexOf(lastDate)));
+				dates.push(nextDate);
+			}
 		}
 
 		selectedDates = dates;
