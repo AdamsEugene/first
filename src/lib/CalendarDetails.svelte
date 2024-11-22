@@ -164,15 +164,6 @@
 	<div class="h-14">something</div>
 
 	<div class="w-full overflow-clip rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90">
-		<!-- <div
-			class="grid h-[8vh] p-2 text-center text-white"
-			style="grid-template-columns: repeat({colCount()}, minmax(0, 1fr))"
-		>
-			{#each weekDays as day}
-				<div class="flex items-center justify-center font-bold">{day}</div>
-			{/each}
-		</div> -->
-
 		<div
 			class="grid h-[calc(95vh-74px)]"
 			style="grid-template-rows: repeat({rowCount()}, 1fr); grid-template-columns: repeat({colCount()}, minmax(0, 1fr))"
