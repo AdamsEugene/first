@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
+	import { setModalState, selectedDay } from '../lib/utils/store';
+	import { fly } from 'svelte/transition';
 
 	type DAYS = {
 		date: number;
@@ -21,6 +23,8 @@
 	let dragStart: Date | null = $state(null);
 	let dragEnd: Date | null = $state(null);
 	let selectedDates = $state<Date[]>([]);
+
+	let isDropdownOpen = $state(false);
 
 	const months = [
 		'January',
@@ -116,6 +120,7 @@
 		isDragging = true;
 		dragStart = new Date(year, month, date);
 		dragEnd = dragStart;
+		selectedDay.update(() => dragStart as Date);
 		updateSelectedDates();
 	}
 
@@ -127,6 +132,13 @@
 
 	function handleDragEnd() {
 		isDragging = false;
+	}
+
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (isDropdownOpen && !target.closest('.relative')) {
+			isDropdownOpen = false;
+		}
 	}
 
 	function updateSelectedDates() {
@@ -165,6 +177,14 @@
 		}
 	}
 
+	function setSelectedDate(type: 'event' | 'task' | 'appointment', event?: MouseEvent) {
+		console.log($selectedDay);
+		setModalState.update(() => true);
+
+		// isModalOpen = true;
+		// eventType = type === 'task' ? 'Task' : 'Event';
+	}
+
 	$effect(() => {
 		if (selectedDates.length > 0 && !isDragging) {
 			const currentSelectedDate = {
@@ -176,43 +196,120 @@
 		}
 	});
 
-	onMount(() => {
+	onMount(async () => {
 		currentMonth = currentDate.getMonth();
 		currentYear = currentDate.getFullYear();
 		generateCalendar(currentMonth, currentYear);
+		await tick();
+
+		document.addEventListener('click', handleClickOutside);
 	});
+
+	// onDestroy(async () => {
+	// 	await tick();
+	// 	// document.removeEventListener('click', handleClickOutside);
+	// });
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="min-w-[300px] overflow-hidden rounded-3xl font-sans text-white/80"
+	class="flex min-w-[220px] flex-col gap-2 rounded-3xl font-sans text-white/80"
 	onmouseleave={handleDragEnd}
 	onmouseup={handleMouseUp}
 >
-	<div class="flex items-center justify-between p-4">
-		<h2 class="text-lg font-semibold">
+	<div class="relative">
+		<button
+			class="rounded-3xl bg-[#1e2c3b] p-4 text-white transition-colors hover:bg-[#1e2c3b]/90"
+			onclick={() => (isDropdownOpen = !isDropdownOpen)}
+		>
+			+ Create
+		</button>
+
+		{#if isDropdownOpen}
+			<div
+				class="absolute right-0 mt-2 w-56 rounded-lg border border-[#1e2c3b]/90 bg-slate-950 p-2 shadow-lg"
+				transition:fly={{ y: 5, duration: 200 }}
+			>
+				<button
+					class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-gray-400 hover:bg-[#1e2c3b]/20 hover:text-white"
+					onclick={() => {
+						setSelectedDate('event');
+						isDropdownOpen = false;
+					}}
+				>
+					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+						<path
+							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+					Event
+				</button>
+
+				<button
+					class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-gray-400 hover:bg-[#1e2c3b]/20 hover:text-white"
+					onclick={() => {
+						setSelectedDate('task');
+						isDropdownOpen = false;
+					}}
+				>
+					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+						<path
+							d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+					Task
+				</button>
+
+				<button
+					class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-gray-400 hover:bg-[#1e2c3b]/20 hover:text-white"
+					onclick={() => {
+						setSelectedDate('appointment');
+						isDropdownOpen = false;
+					}}
+				>
+					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+						<path
+							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+					Appointment Schedule
+				</button>
+			</div>
+		{/if}
+	</div>
+	<div class="flex items-center justify-between pl-1">
+		<h2 class="text-sm font-semibold">
 			{months[currentDate.getMonth()]}
 			{currentDate.getFullYear()}
 		</h2>
 		<div>
 			<button
 				onclick={prevMonth}
-				class="cursor-pointer rounded-full border-none px-4 py-2 hover:bg-[#1e2c3b]/50"
+				class="cursor-pointer rounded-full border-none bg-[#1e2c3b]/50 px-2 py-[2px] text-sm hover:bg-[#1e2c3b]/90"
 			>
 				&lt;
 			</button>
 			<button
 				onclick={nextMonth}
-				class="cursor-pointer rounded-full border-none px-4 py-2 hover:bg-[#1e2c3b]/50"
+				class="cursor-pointer rounded-full border-none bg-[#1e2c3b]/50 px-2 py-[2px] text-sm hover:bg-[#1e2c3b]/90"
 			>
 				&gt;
 			</button>
 		</div>
 	</div>
 
-	<div class="grid grid-cols-7 p-2 text-center">
+	<div class="grid w-full grid-cols-7 text-center">
 		{#each weekDays as day}
-			<div class="text-sm font-bold">{day}</div>
+			<div class="text-xs">{day}</div>
 		{/each}
 	</div>
 
@@ -236,9 +333,8 @@
 				onmouseup={handleDragEnd}
 			>
 				<div
-					class="flex h-6 w-6 items-center justify-center rounded-full p-2 {isToday &&
-					isCurrentMonth
-						? '!bg-[#1e2c3b] text-white hover:bg-black/60'
+					class="flex items-center justify-center rounded-full {isToday && isCurrentMonth
+						? '!bg-[#1e2c3b] text-xs text-white hover:bg-black/60'
 						: ''}"
 				>
 					{date}

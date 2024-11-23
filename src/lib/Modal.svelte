@@ -1,12 +1,17 @@
 <script lang="ts">
+	import { onDestroy, onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
 	import { fade, fly, scale } from 'svelte/transition';
+	import { throttle } from './utils/functions';
 
 	let { closeModal, selectedDayInfo, clickPosition } = $props<{
 		closeModal: () => void;
 		selectedDayInfo: any;
 		clickPosition: DOMRect | null;
 	}>();
+
+	let modalPosition = $state({ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' });
+	let observer: ResizeObserver | null = null;
 
 	let showTimePicker = $state(false);
 	let selectedHour = $state('12');
@@ -23,7 +28,7 @@
 	let visibility = $state('Free');
 	let repeatOption = $state('Does not repeat');
 	// svelte-ignore non_reactive_update
-		let direction = 'left';
+	let direction = 'left';
 
 	function toggleEventType(type: 'Event' | 'Task') {
 		eventType = type;
@@ -41,45 +46,63 @@
 		showTimePicker = !showTimePicker;
 	}
 
-	let modalPosition = $derived(() => {
-		if (!clickPosition) return { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
+	const calculatePositionThrottled = throttle(() => {
+		if (!clickPosition) {
+			modalPosition = { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
+			return;
+		}
 
-		const modalWidth = 500; // max-w-[500px]
-		const modalHeight = 665; // approximate height of modal
+		const modalWidth = 500;
+		const modalHeight = 665;
 		const windowWidth = window.innerWidth;
 		const windowHeight = window.innerHeight;
 
-		// Check if modal should be placed on left or right of the clicked element
 		const shouldShowOnLeft =
 			clickPosition.left + clickPosition.width + modalWidth + 20 > windowWidth;
 
-		// Calculate left position
 		let left = shouldShowOnLeft
-			? `${clickPosition.left - modalWidth - 10}px` // 10px gap
+			? `${clickPosition.left - modalWidth - 10}px`
 			: `${clickPosition.left + clickPosition.width + 10}px`;
 
 		direction = shouldShowOnLeft ? 'left' : 'right';
 
-		// Calculate top position
 		let top = `${clickPosition.top}px`;
 		let transform = 'none';
 
-		// Check if element is in the middle row (allowing for 1px rounding differences)
 		const elementPosition = Math.round(clickPosition.top * 2 + clickPosition.height);
 		const viewportHeight = Math.round(windowHeight);
 
-		if (elementPosition - 72 === viewportHeight) {
-			// Center the modal vertically relative to the clicked position
+		const isInMiddleRange = Math.abs(elementPosition - viewportHeight - 72) <= 10;
+
+		if (isInMiddleRange) {
 			top = `${clickPosition.top + clickPosition.height / 2}px`;
 			transform = 'translateY(-50%)';
 		} else if (clickPosition.top + modalHeight > windowHeight) {
-			// Original logic for bottom overflow
 			top = `${clickPosition.top + clickPosition.height}px`;
 			transform = 'translateY(-100%)';
 		}
 
-		return { left, top, transform };
-	});
+		modalPosition = { left, top, transform };
+	}, 100);
+
+	function setupPositionObservers() {
+		window.addEventListener('resize', calculatePositionThrottled);
+
+		observer = new ResizeObserver(calculatePositionThrottled);
+		const modalElement = document.querySelector('.modal');
+		if (modalElement) {
+			observer.observe(modalElement);
+		}
+	}
+
+	function cleanupPositionObservers() {
+		window.removeEventListener('resize', calculatePositionThrottled);
+		calculatePositionThrottled.cancel();
+		if (observer) {
+			observer.disconnect();
+			observer = null;
+		}
+	}
 
 	function flyAndScale(
 		node: HTMLElement,
@@ -91,12 +114,22 @@
 			css: (t: number) => {
 				const eased = cubicOut(t);
 				return `
-                transform: translate(${(1 - t) * x}px, ${(1 - t) * y}px) scale(${startScale + (1 - startScale) * eased});
+                // transform: translate(${1 - t}px, ${1 - t}px) scale(${startScale + (1 - startScale) * eased});
                 opacity: ${t};
             `;
 			}
 		};
 	}
+
+	// In your component initialization
+	onMount(() => {
+		setupPositionObservers();
+	});
+
+	// In your component cleanup
+	onDestroy(() => {
+		cleanupPositionObservers();
+	});
 </script>
 
 <!-- Modal Backdrop -->
@@ -111,10 +144,9 @@
 
 <!-- Modal Content -->
 <div
-	class="fixed w-full max-w-[500px] rounded-3xl bg-slate-950 p-6 text-white/80 shadow-xl transition-all duration-300 ease-out"
-	style="left: {modalPosition().left}; top: {modalPosition().top}; transform: {modalPosition()
-		.transform}"
-	transition:flyAndScale={{ x: direction === 'left' ? 50 : -50, duration: 300, startScale: 0.9 }}
+	class="modal w-full max-w-[500px] rounded-3xl bg-slate-950 p-6 text-white/80 shadow-xl transition-all absolute"
+	style="left: {modalPosition.left}; top: {modalPosition.top}; transform: {modalPosition.transform}"
+	transition:flyAndScale={{ x: 0, duration: 300, startScale: 0.9 }}
 >
 	<!-- Header -->
 	<div class="mb-6 flex items-center gap-4">

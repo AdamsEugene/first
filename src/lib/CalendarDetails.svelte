@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import Modal from './Modal.svelte';
+	import { selectedDay, setModalState } from '../lib/utils/store';
 
 	interface DateRange {
 		allDates: Date[];
@@ -21,6 +22,8 @@
 		month: number;
 		year: number;
 	};
+
+	let selectedKey = $derived<DAYS>(constructKey($selectedDay));
 
 	let { selectedDates = null } = $props<{ selectedDates: DateRange | null }>();
 
@@ -111,6 +114,7 @@
 
 	function closeModal() {
 		isModalOpen = false;
+		setModalState.update(() => false);
 	}
 
 	let rowCount = $derived(() => Math.ceil(generatedDays.length / 7));
@@ -153,10 +157,36 @@
 			month,
 			year
 		}));
+		attachModal(constructKey(firstDate));
 	});
 
-	onMount(() => {
+	function constructKey(date: Date): DAYS {
+		return {
+			date: date.getDate(),
+			month: date.getMonth(),
+			year: date.getFullYear(),
+			isCurrentMonth: false,
+			isToday: false
+		};
+	}
+
+	async function attachModal(newDate?: DAYS) {
+		await tick();
+		const id = newDate ? dayKey(newDate) : dayKey(selectedKey);
+		const element = document.getElementById(id);
+
+		if (element) clickPosition = element.getBoundingClientRect();
+	}
+
+	$effect(() => {
+		selectedDayInfo = selectedKey;
+		attachModal();
+	});
+
+	onMount(async () => {
 		generateCalendar(currentMonth, currentYear);
+		await tick();
+		attachModal();
 	});
 </script>
 
@@ -165,7 +195,7 @@
 
 	<div class="w-full overflow-clip rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90">
 		<div
-			class="grid h-[calc(95vh-74px)]"
+			class="grid h-[calc(95vh-73px)]"
 			style="grid-template-rows: repeat({rowCount()}, 1fr); grid-template-columns: repeat({colCount()}, minmax(0, 1fr))"
 		>
 			{#if generatedDays.length > 0}
@@ -173,13 +203,17 @@
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
-						class="group flex w-full
+						id={dayKey(day)}
+						class="group relative flex w-full
 				 cursor-pointer flex-col
 				rounded-xl border border-[#1e2c3b] p-2
 				text-white/80 transition-[background-color,transform,box-shadow] duration-300
 				ease-in-out hover:scale-[0.97] hover:bg-[#1e2c3b]/20
 				hover:shadow-lg
-				{selectedDate === dayKey(day) ? '!bg-[#1e2c3b]/20 text-white' : ''}
+				{(selectedDate === dayKey(day) && isModalOpen) ||
+						(dayKey(day) === dayKey(selectedKey) && $setModalState)
+							? '!bg-[#1e2c3b]/20 text-white'
+							: ''}
 			  "
 						onclick={(e) => setSelectedDate(day, e)}
 					>
@@ -202,6 +236,6 @@
 	</div>
 </div>
 
-{#if isModalOpen}
+{#if isModalOpen || $setModalState}
 	<Modal {closeModal} {selectedDayInfo} {clickPosition} />
 {/if}
