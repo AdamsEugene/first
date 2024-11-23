@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import Modal from './Modal.svelte';
+	import Modal from './components/Modal.svelte';
 	import { selectedDay, setModalState } from '../lib/utils/store';
+	import { fade } from 'svelte/transition';
 
 	interface DateRange {
 		allDates: Date[];
@@ -35,6 +36,11 @@
 	let selectedDate: string | null = $state(null);
 	let isModalOpen = $state(false);
 	let selectedDayInfo = $state<DAYS | null>(null);
+
+	let isDragging = $state(false);
+	let dragStart: Date | null = $state(null);
+	let dragEnd: Date | null = $state(null);
+	let _selectedDates = $state<Date[]>([]);
 
 	let allDates = $derived((selectedDates as DateRange)?.allDates ?? []);
 	let days = $derived<DayInfo[]>(
@@ -160,6 +166,65 @@
 		attachModal(constructKey(firstDate));
 	});
 
+	function handleDragStart(days: DAYS) {
+		const { date, month, year, isCurrentMonth } = days;
+		if (!isCurrentMonth) return;
+		isDragging = true;
+		dragStart = new Date(year, month, date);
+		dragEnd = dragStart;
+		selectedDay.update(() => dragStart as Date);
+		updateSelectedDates();
+	}
+
+	function handleDragMove(days: DAYS) {
+		const { date, month, year, isCurrentMonth } = days;
+		if (!isDragging || !isCurrentMonth) return;
+		dragEnd = new Date(year, month, date);
+		updateSelectedDates();
+	}
+
+	function handleDragEnd() {
+		isDragging = false;
+	}
+
+	function updateSelectedDates() {
+		if (!dragStart || !dragEnd) return;
+
+		const start = dragStart < dragEnd ? dragStart : dragEnd;
+		const end = dragStart < dragEnd ? dragEnd : dragStart;
+
+		let dates: Date[] = [];
+		const currentDate = new Date(start);
+
+		// Get initial selection
+		while (currentDate <= end) {
+			dates.push(new Date(currentDate));
+			currentDate.setDate(currentDate.getDate() + 1);
+		}
+
+		// // Extend to next multiple of 7 if needed
+		// if (dates.length > 7) {
+		// 	const daysNeeded = Math.ceil(dates.length / 7) * 7;
+		// 	const lastDate = dates[dates.length - 1];
+
+		// 	while (dates.length < daysNeeded) {
+		// 		const nextDate = new Date(lastDate);
+		// 		nextDate.setDate(lastDate.getDate() + (dates.length - dates.indexOf(lastDate)));
+		// 		dates.push(nextDate);
+		// 	}
+		// }
+
+		_selectedDates = dates;
+
+		console.log(_selectedDates);
+	}
+
+	function handleMouseUp() {
+		if (isDragging) {
+			handleDragEnd();
+		}
+	}
+
 	function constructKey(date: Date): DAYS {
 		return {
 			date: date.getDate(),
@@ -178,6 +243,15 @@
 		if (element) clickPosition = element.getBoundingClientRect();
 	}
 
+	let isPartOfSelectedDay = $derived((day: DAYS) =>
+		_selectedDates.some(
+			(selectedDate) =>
+				selectedDate.getDate() === day.date &&
+				selectedDate.getMonth() === day.month &&
+				selectedDate.getFullYear() === day.year
+		)
+	);
+
 	$effect(() => {
 		selectedDayInfo = selectedKey;
 		attachModal();
@@ -193,10 +267,15 @@
 <div class="flex w-full flex-col gap-4 text-white/80">
 	<div class="h-14">something</div>
 
-	<div class="w-full overflow-clip rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90">
+	<div
+		class="w-full overflow-clip rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90 shadow-2xl"
+	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="grid h-[calc(95vh-73px)]"
+			class="grid h-[calc(95vh-74px)]"
 			style="grid-template-rows: repeat({rowCount()}, 1fr); grid-template-columns: repeat({colCount()}, minmax(0, 1fr))"
+			onmouseleave={handleDragEnd}
+			onmouseup={handleMouseUp}
 		>
 			{#if generatedDays.length > 0}
 				{#each generatedDays as day, index (dayKey(day))}
@@ -204,29 +283,43 @@
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
 						id={dayKey(day)}
-						class="group relative flex w-full
-				 cursor-pointer flex-col
-				rounded-xl border border-[#1e2c3b] p-2
-				text-white/80 transition-[background-color,transform,box-shadow] duration-300
-				ease-in-out hover:scale-[0.97] hover:bg-[#1e2c3b]/20
-				hover:shadow-lg
-				{(selectedDate === dayKey(day) && isModalOpen) ||
+						class="group relative flex w-full cursor-pointer
+						select-none flex-col gap-2
+						rounded-xl border border-[#1e2c3b] p-2
+						text-white/80 transition-[background-color,transform,box-shadow] duration-300
+						ease-in-out hover:scale-[0.97] hover:bg-[#1e2c3b]/20
+						hover:shadow-lg
+						{(selectedDate === dayKey(day) && isModalOpen) ||
 						(dayKey(day) === dayKey(selectedKey) && $setModalState)
 							? '!bg-[#1e2c3b]/20 text-white'
 							: ''}
+							
 			  "
+						onmousedown={() => handleDragStart(day)}
+						onmouseenter={() => handleDragMove(day)}
+						onmouseup={handleDragEnd}
 						onclick={(e) => setSelectedDate(day, e)}
 					>
-						<div class="flex w-full justify-center">{weekDays[index]}</div>
+						<div class="flex w-full justify-center text-sm">{weekDays[index]}</div>
 						<div
-							class="flex h-14 w-14 items-center justify-center rounded-full p-4 text-center
-				font-medium
-				transition-transform duration-300 ease-in-out
+							class="flex rounded-full p-1 text-center
+				text-sm
+				font-medium transition-transform duration-300 ease-in-out
 				group-hover:text-white
-				{day.isToday && day.isCurrentMonth ? 'bg-black/70 text-white' : ''}"
+				{day.isToday && day.isCurrentMonth
+								? 'h-10 w-10 items-center justify-center  bg-black/70 text-white'
+								: ''}"
 						>
 							{day.date}
 						</div>
+						{#if isPartOfSelectedDay(day)}
+							<div
+								class="w-full rounded-3xl bg-teal-900 px-2 py-[2px] text-xs"
+								in:fade={{ duration: 500 }}
+							>
+								(no title)
+							</div>
+						{/if}
 					</div>
 				{/each}
 			{:else}
@@ -239,3 +332,7 @@
 {#if isModalOpen || $setModalState}
 	<Modal {closeModal} {selectedDayInfo} {clickPosition} />
 {/if}
+
+<!-- {
+							? '!bg-[#1e2c3b] text-white hover:bg-[#1e2c3b]/90'
+							: ''} -->

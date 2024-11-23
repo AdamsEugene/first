@@ -1,7 +1,21 @@
 <script lang="ts">
-	import { onDestroy, onMount, tick } from 'svelte';
-	import { setModalState, selectedDay } from '../lib/utils/store';
+	import { onMount, tick } from 'svelte';
 	import { fly } from 'svelte/transition';
+	import {
+		Plus,
+		ChevronRight,
+		ChevronLeft,
+		ChevronDown,
+		ChevronUp,
+		Calendar,
+		CalendarCheck,
+		CircleCheck,
+		Upload,
+		User
+	} from 'lucide-svelte';
+
+	import { setModalState, selectedDay } from '../lib/utils/store';
+	import Dropdown from './components/Dropdown.svelte';
 
 	type DAYS = {
 		date: number;
@@ -10,6 +24,11 @@
 		month: number;
 		year: number;
 	};
+
+	const options = [
+		{ id: 'new', label: 'New Item', icon: Plus, onClick: () => {} },
+		{ id: 'import', label: 'Import', icon: Upload, onClick: () => {} }
+	];
 
 	let { onDateSelect = () => {} } = $props();
 
@@ -134,13 +153,6 @@
 		isDragging = false;
 	}
 
-	function handleClickOutside(event: MouseEvent) {
-		const target = event.target as HTMLElement;
-		if (isDropdownOpen && !target.closest('.relative')) {
-			isDropdownOpen = false;
-		}
-	}
-
 	function updateSelectedDates() {
 		if (!dragStart || !dragEnd) return;
 
@@ -177,6 +189,13 @@
 		}
 	}
 
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (isDropdownOpen && !target.closest('.relative')) {
+			isDropdownOpen = false;
+		}
+	}
+
 	function setSelectedDate(type: 'event' | 'task' | 'appointment', event?: MouseEvent) {
 		console.log($selectedDay);
 		setModalState.update(() => true);
@@ -184,6 +203,8 @@
 		// isModalOpen = true;
 		// eventType = type === 'task' ? 'Task' : 'Event';
 	}
+
+	let ChevronIcon = $derived(isDropdownOpen ? ChevronUp : ChevronDown);
 
 	$effect(() => {
 		if (selectedDates.length > 0 && !isDragging) {
@@ -213,21 +234,23 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="flex min-w-[220px] flex-col gap-2 rounded-3xl font-sans text-white/80"
+	class="flex min-w-[220px] flex-col gap-8 rounded-3xl font-sans text-white/80"
 	onmouseleave={handleDragEnd}
 	onmouseup={handleMouseUp}
 >
 	<div class="relative">
 		<button
-			class="rounded-3xl bg-[#1e2c3b] p-4 text-white transition-colors hover:bg-[#1e2c3b]/90"
+			class="flex items-center gap-3 rounded-3xl bg-[#1e2c3b] p-4 text-white transition-colors hover:bg-[#1e2c3b]/90"
 			onclick={() => (isDropdownOpen = !isDropdownOpen)}
 		>
-			+ Create
+			<Plus />
+			<span>Create</span>
+			<ChevronIcon size={18} />
 		</button>
 
 		{#if isDropdownOpen}
 			<div
-				class="absolute right-0 mt-2 w-56 rounded-lg border border-[#1e2c3b]/90 bg-slate-950 p-2 shadow-lg"
+				class="absolute right-0 mt-2 min-w-56 rounded-lg border border-[#1e2c3b]/90 bg-slate-950 p-2 shadow-lg"
 				transition:fly={{ y: 5, duration: 200 }}
 			>
 				<button
@@ -237,14 +260,7 @@
 						isDropdownOpen = false;
 					}}
 				>
-					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-						<path
-							d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
+					<Calendar size={22} />
 					Event
 				</button>
 
@@ -255,14 +271,7 @@
 						isDropdownOpen = false;
 					}}
 				>
-					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-						<path
-							d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
+					<CalendarCheck size={22} />
 					Task
 				</button>
 
@@ -273,73 +282,65 @@
 						isDropdownOpen = false;
 					}}
 				>
-					<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-						<path
-							d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
+					<CircleCheck size={22} />
 					Appointment Schedule
 				</button>
 			</div>
 		{/if}
 	</div>
-	<div class="flex items-center justify-between pl-1">
-		<h2 class="text-sm font-semibold">
-			{months[currentDate.getMonth()]}
-			{currentDate.getFullYear()}
-		</h2>
-		<div>
-			<button
-				onclick={prevMonth}
-				class="cursor-pointer rounded-full border-none bg-[#1e2c3b]/50 px-2 py-[2px] text-sm hover:bg-[#1e2c3b]/90"
-			>
-				&lt;
-			</button>
-			<button
-				onclick={nextMonth}
-				class="cursor-pointer rounded-full border-none bg-[#1e2c3b]/50 px-2 py-[2px] text-sm hover:bg-[#1e2c3b]/90"
-			>
-				&gt;
-			</button>
+
+	<div class="flex flex-col gap-2">
+		<div class="flex items-center justify-between pl-1">
+			<h2 class="text-sm font-semibold">
+				{months[currentDate.getMonth()]}
+				{currentDate.getFullYear()}
+			</h2>
+			<div class="flex items-center gap-2">
+				<ChevronLeft onclick={prevMonth} size={18} />
+				<ChevronRight onclick={nextMonth} size={18} />
+			</div>
 		</div>
-	</div>
 
-	<div class="grid w-full grid-cols-7 text-center">
-		{#each weekDays as day}
-			<div class="text-xs">{day}</div>
-		{/each}
-	</div>
+		<div class="grid w-full grid-cols-7 text-center">
+			{#each weekDays as day}
+				<div class="text-xs">{day}</div>
+			{/each}
+		</div>
 
-	<div class="grid grid-cols-7 gap-[1px]">
-		{#each days as { date, isCurrentMonth, isToday, month, year } (date + '' + isCurrentMonth + '' + isToday + '' + month + '' + year)}
-			<button
-				class="
+		<div class="grid grid-cols-7 gap-[1px]">
+			{#each days as { date, isCurrentMonth, isToday, month, year } (date + '' + isCurrentMonth + '' + isToday + '' + month + '' + year)}
+				<button
+					class="
           cursor-pointer rounded p-2 text-center text-xs hover:bg-[#1e2c3b]/50
           {!isCurrentMonth ? 'text-gray-600' : ''}
           {selectedDates.some(
-					(selectedDate) =>
-						selectedDate.getDate() === date &&
-						selectedDate.getMonth() === month &&
-						selectedDate.getFullYear() === year
-				)
-					? '!bg-[#1e2c3b] text-white hover:bg-[#1e2c3b]/90'
-					: ''}
+						(selectedDate) =>
+							selectedDate.getDate() === date &&
+							selectedDate.getMonth() === month &&
+							selectedDate.getFullYear() === year
+					)
+						? '!bg-[#1e2c3b] text-white hover:bg-[#1e2c3b]/90'
+						: ''}
         "
-				onmousedown={() => handleDragStart(date, month, year, isCurrentMonth)}
-				onmouseenter={() => handleDragMove(date, month, year, isCurrentMonth)}
-				onmouseup={handleDragEnd}
-			>
-				<div
-					class="flex items-center justify-center rounded-full {isToday && isCurrentMonth
-						? '!bg-[#1e2c3b] text-xs text-white hover:bg-black/60'
-						: ''}"
+					onmousedown={() => handleDragStart(date, month, year, isCurrentMonth)}
+					onmouseenter={() => handleDragMove(date, month, year, isCurrentMonth)}
+					onmouseup={handleDragEnd}
 				>
-					{date}
-				</div>
-			</button>
-		{/each}
+					<div
+						class="flex items-center justify-center rounded-full {isToday && isCurrentMonth
+							? '!bg-[#1e2c3b] text-xs text-white hover:bg-black/60'
+							: ''}"
+					>
+						{date}
+					</div>
+				</button>
+			{/each}
+		</div>
 	</div>
 </div>
+
+<!-- <Dropdown
+  {options}
+  label="Create"
+  buttonIcon={Plus}
+/> -->

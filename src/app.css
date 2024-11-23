@@ -6,3 +6,9 @@ body {
 	--tw-bg-opacity: 1;
 	background-color: rgb(2 6 23 / var(--tw-bg-opacity)) /* #020617 */;
 }
+
+* {
+	box-sizing: border-box;
+	padding: 0;
+	margin: 0;
+}

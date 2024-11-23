@@ -7,8 +7,8 @@
 
 	import type { PageData } from './$types';
 	import Counter from '$lib/Counter.svelte';
-	import Image from '$lib/Image.svelte';
-	import Button from '$lib/Button.svelte';
+	import Image from '$lib/components/Image.svelte';
+	import Button from '$lib/components/Button.svelte';
 	import Calendar from '$lib/Calendar.svelte';
 	import CalendarDetails from '$lib/CalendarDetails.svelte';
 

@@ -2,7 +2,9 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
 	import { fade, fly, scale } from 'svelte/transition';
-	import { throttle } from './utils/functions';
+	import { throttle } from '../utils/functions';
+	import Textarea from './Textarea.svelte';
+	import Input from './Input.svelte';
 
 	let { closeModal, selectedDayInfo, clickPosition } = $props<{
 		closeModal: () => void;
@@ -18,7 +20,7 @@
 	let selectedMinute = $state('00');
 	let selectedPeriod = $state('AM');
 
-	let eventType = $state<'Event' | 'Task'>('Event'); // or 'Task'
+	let eventType = $state<'Event' | 'Task' | 'Schedule'>('Event'); // or 'Task'
 	let guests = $state<string[]>([]);
 	let location = $state('');
 	let meetLink = $state(false);
@@ -30,7 +32,7 @@
 	// svelte-ignore non_reactive_update
 	let direction = 'left';
 
-	function toggleEventType(type: 'Event' | 'Task') {
+	function toggleEventType(type: 'Event' | 'Task' | 'Schedule') {
 		eventType = type;
 	}
 
@@ -144,7 +146,7 @@
 
 <!-- Modal Content -->
 <div
-	class="modal w-full max-w-[500px] rounded-3xl bg-slate-950 p-6 text-white/80 shadow-xl transition-all absolute"
+	class="modal absolute w-full max-w-[500px] rounded-3xl bg-slate-950 p-6 text-white/80 shadow-xl transition-all"
 	style="left: {modalPosition.left}; top: {modalPosition.top}; transform: {modalPosition.transform}"
 	transition:flyAndScale={{ x: 0, duration: 300, startScale: 0.9 }}
 >
@@ -202,6 +204,14 @@
 				onclick={() => toggleEventType('Task')}
 			>
 				Task
+			</button>
+			<button
+				class="flex-1 rounded-md px-3 py-1 text-sm transition-colors {eventType === 'Task'
+					? 'bg-[#1e2c3b] text-white'
+					: 'text-gray-400 hover:text-white'}"
+				onclick={() => toggleEventType('Schedule')}
+			>
+				Schedule
 			</button>
 		</div>
 
@@ -366,11 +376,7 @@
 						stroke-linejoin="round"
 					/>
 				</svg>
-				<input
-					bind:value={location}
-					class="flex-1 bg-transparent outline-none placeholder:text-gray-500"
-					placeholder="Add location"
-				/>
+				<Input bind={location} />
 			</div>
 		{/if}
 
@@ -384,11 +390,7 @@
 					stroke-linejoin="round"
 				/>
 			</svg>
-			<textarea
-				class="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-500"
-				placeholder="Add description or Google Drive attachment"
-				rows="3"
-			></textarea>
+			<Textarea />
 		</div>
 
 		{#if eventType === 'Task'}
