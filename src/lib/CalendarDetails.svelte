@@ -38,6 +38,7 @@
 	let selectedDayInfo = $state<DAYS | null>(null);
 
 	let isDragging = $state(false);
+	let isCorrectSelection = $state(false);
 	let dragStart: Date | null = $state(null);
 	let dragEnd: Date | null = $state(null);
 	let _selectedDates = $state<Date[]>([]);
@@ -169,7 +170,11 @@
 
 	function handleDragStart(days: DAYS) {
 		const { date, month, year, isCurrentMonth } = days;
-		if (!isCurrentMonth) return;
+		if (!isCurrentMonth) {
+			isCorrectSelection = false;
+			return;
+		}
+		isCorrectSelection = true;
 		isDragging = true;
 		dragStart = new Date(year, month, date);
 		dragEnd = dragStart;
@@ -179,7 +184,11 @@
 
 	function handleDragMove(days: DAYS) {
 		const { date, month, year, isCurrentMonth } = days;
-		if (!isDragging || !isCurrentMonth) return;
+		if (!isDragging || !isCurrentMonth) {
+			isCorrectSelection = false;
+			return;
+		}
+		isCorrectSelection = true;
 		dragEnd = new Date(year, month, date);
 		updateSelectedDates();
 	}
@@ -221,9 +230,12 @@
 	}
 
 	function handleMouseUp() {
-		if (isDragging) {
-			handleDragEnd();
+		if (isCorrectSelection) {
+			const lastDate = _selectedDates.at(-1);
+			if (lastDate) attachModal(constructKey(lastDate));
+			isModalOpen = true;
 		}
+		if (isDragging) handleDragEnd();
 	}
 
 	function constructKey(date: Date): DAYS {
@@ -269,35 +281,36 @@
 		return 'middle';
 	});
 
-	let paddingForTitle = $derived((day: DAYS) =>
-		generateStartMiddleClass(day) === 'start'
-			? 'pl-2'
-			: generateStartMiddleClass(day) === 'end'
-				? 'pr-2'
-				: generateStartMiddleClass(day) === 'just_one'
-					? 'px-2'
-					: generateStartMiddleClass(day) === 'middle'
-						? 'px-0'
-						: 'px-2'
-	);
+	let paddingForTitle = $derived((day: DAYS) => {
+		const position = generateStartMiddleClass(day);
+		return (
+			{
+				start: 'pl-2',
+				end: 'pr-2',
+				just_one: 'px-2',
+				middle: 'px-0',
+				'': 'px-2'
+			}[position] || 'px-2'
+		);
+	});
 
-	let roundedForTitle = $derived((day: DAYS) =>
-		generateStartMiddleClass(day) === 'start'
-			? 'rounded-l-3xl'
-			: generateStartMiddleClass(day) === 'end'
-				? 'rounded-r-3xl'
-				: generateStartMiddleClass(day) === 'just_one'
-					? 'rounded-3xl'
-					: ''
-	);
+	let roundedForTitle = $derived((day: DAYS) => {
+		const position = generateStartMiddleClass(day);
+		return (
+			{
+				start: 'rounded-l-3xl',
+				end: 'rounded-r-3xl',
+				just_one: 'rounded-3xl',
+				middle: '',
+				'': ''
+			}[position] || ''
+		);
+	});
 
-	let paddingForTitleCont = $derived((day: DAYS) =>
-		generateStartMiddleClass(day) === 'middle'
-			? 'px-3'
-			: generateStartMiddleClass(day) === 'end'
-				? 'px-3'
-				: ''
-	);
+	let paddingForTitleCont = $derived((day: DAYS) => {
+		const position = generateStartMiddleClass(day);
+		return ['middle', 'end'].includes(position) ? 'px-3' : '';
+	});
 
 	$effect(() => {
 		selectedDayInfo = selectedKey;
@@ -363,7 +376,7 @@
 						>
 							{day.date}
 						</div>
-						{#if isPartOfSelectedDay(day)}
+						{#if isPartOfSelectedDay(day) && (isModalOpen || isDragging)}
 							<div
 								class="w-full bg-teal-900 px-2 py-[2px] text-xs {roundedForTitle(day)}"
 								in:fade={{ duration: 500 }}
@@ -383,7 +396,3 @@
 {#if isModalOpen || $setModalState}
 	<Modal {closeModal} {selectedDayInfo} {clickPosition} />
 {/if}
-
-<!-- {
-							? '!bg-[#1e2c3b] text-white hover:bg-[#1e2c3b]/90'
-							: ''} -->
