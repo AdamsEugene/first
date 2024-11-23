@@ -111,6 +111,7 @@
 	let dayKey = $derived((day: DAYS) => `${day.date}-${day.month}-${day.year}`);
 
 	function setSelectedDate(day: DAYS, event: MouseEvent) {
+		if (!day.isCurrentMonth) return;
 		selectedDate = dayKey(day);
 		selectedDayInfo = day;
 		const element = event.currentTarget as HTMLElement;
@@ -216,7 +217,7 @@
 
 		_selectedDates = dates;
 
-		console.log(_selectedDates);
+		// console.log(_selectedDates);
 	}
 
 	function handleMouseUp() {
@@ -252,6 +253,52 @@
 		)
 	);
 
+	let generateStartMiddleClass = $derived((day: DAYS) => {
+		if (_selectedDates.length === 1) return 'just_one';
+
+		const matchIndex = _selectedDates.findIndex(
+			(selectedDate) =>
+				selectedDate.getDate() === day.date &&
+				selectedDate.getMonth() === day.month &&
+				selectedDate.getFullYear() === day.year
+		);
+
+		if (matchIndex === -1) return '';
+		if (matchIndex === 0) return 'start';
+		if (matchIndex === _selectedDates.length - 1) return 'end';
+		return 'middle';
+	});
+
+	let paddingForTitle = $derived((day: DAYS) =>
+		generateStartMiddleClass(day) === 'start'
+			? 'pl-2'
+			: generateStartMiddleClass(day) === 'end'
+				? 'pr-2'
+				: generateStartMiddleClass(day) === 'just_one'
+					? 'px-2'
+					: generateStartMiddleClass(day) === 'middle'
+						? 'px-0'
+						: 'px-2'
+	);
+
+	let roundedForTitle = $derived((day: DAYS) =>
+		generateStartMiddleClass(day) === 'start'
+			? 'rounded-l-3xl'
+			: generateStartMiddleClass(day) === 'end'
+				? 'rounded-r-3xl'
+				: generateStartMiddleClass(day) === 'just_one'
+					? 'rounded-3xl'
+					: ''
+	);
+
+	let paddingForTitleCont = $derived((day: DAYS) =>
+		generateStartMiddleClass(day) === 'middle'
+			? 'px-3'
+			: generateStartMiddleClass(day) === 'end'
+				? 'px-3'
+				: ''
+	);
+
 	$effect(() => {
 		selectedDayInfo = selectedKey;
 		attachModal();
@@ -284,11 +331,13 @@
 					<div
 						id={dayKey(day)}
 						class="group relative flex w-full cursor-pointer
-						select-none flex-col gap-2
-						rounded-xl border border-[#1e2c3b] p-2
-						text-white/80 transition-[background-color,transform,box-shadow] duration-300
+						select-none flex-col gap-2 rounded-xl
+						border border-[#1e2c3b] py-2
+						text-white/80 transition-all duration-300
 						ease-in-out hover:scale-[0.97] hover:bg-[#1e2c3b]/20
 						hover:shadow-lg
+						{!day.isCurrentMonth ? 'cursor-not-allowed' : ''}
+						{paddingForTitle(day)}
 						{(selectedDate === dayKey(day) && isModalOpen) ||
 						(dayKey(day) === dayKey(selectedKey) && $setModalState)
 							? '!bg-[#1e2c3b]/20 text-white'
@@ -304,8 +353,10 @@
 						<div
 							class="flex rounded-full p-1 text-center
 				text-sm
-				font-medium transition-transform duration-300 ease-in-out
+				font-medium transition-all duration-300 ease-in-out
 				group-hover:text-white
+				{!day.isCurrentMonth ? 'text-white/25' : ''}
+				{paddingForTitleCont(day)}
 				{day.isToday && day.isCurrentMonth
 								? 'h-10 w-10 items-center justify-center  bg-black/70 text-white'
 								: ''}"
@@ -314,7 +365,7 @@
 						</div>
 						{#if isPartOfSelectedDay(day)}
 							<div
-								class="w-full rounded-3xl bg-teal-900 px-2 py-[2px] text-xs"
+								class="w-full bg-teal-900 px-2 py-[2px] text-xs {roundedForTitle(day)}"
 								in:fade={{ duration: 500 }}
 							>
 								(no title)
