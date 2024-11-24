@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import Modal from './components/Modal.svelte';
-	import { selectedDay, setModalState } from '../lib/utils/store';
-	import { fade, scale, blur, fly, slide } from 'svelte/transition';
+	import { storedSelectedDays, setModalState } from '../lib/utils/store';
+	import { fade } from 'svelte/transition';
 
 	interface DateRange {
 		allDates: Date[];
@@ -26,7 +26,7 @@
 		endDate?: DAYS;
 	};
 
-	let selectedKey = $derived<DAYS>(constructKey($selectedDay));
+	let selectedKeys = $derived<DAYS[]>($storedSelectedDays);
 
 	let { selectedDates = null } = $props<{ selectedDates: DateRange | null }>();
 
@@ -111,7 +111,7 @@
 		generatedDays = [...calendarDays];
 	}
 
-	let dayKey = $derived((day: DAYS) => `${day.date}-${day.month}-${day.year}`);
+	let dayKey = $derived((day: DAYS) => `${day?.date}-${day?.month}-${day?.year}`);
 
 	function setSelectedDate(day: DAYS, event: MouseEvent) {
 		if (!day.isCurrentMonth) return;
@@ -125,14 +125,22 @@
 
 	function closeModal() {
 		isModalOpen = false;
-		setModalState.update(() => false);
+		setModalState.update(() => ({ show: false }));
 	}
 
 	let rowCount = $derived(() => Math.ceil(generatedDays.length / 7));
 	let colCount = $derived(() => weekDays.length);
+	let doNotRegenerate = $derived(
+		days?.length > 1
+			? false
+			: generatedDays.some(
+					({ date, month, year }) =>
+						days?.[0]?.day === date && days?.[0]?.month === month && days?.[0]?.year === year
+				)
+	);
 
 	$effect.pre(() => {
-		if (!days || days.length === 0) return;
+		if (!days?.length || doNotRegenerate) return;
 
 		if (days.length === 1) {
 			const firstDay = days[0];
@@ -181,7 +189,6 @@
 		isDragging = true;
 		dragStart = new Date(year, month, date);
 		dragEnd = dragStart;
-		selectedDay.update(() => dragStart as Date);
 		updateSelectedDates();
 	}
 
@@ -198,6 +205,7 @@
 
 	function handleDragEnd() {
 		isDragging = false;
+		// storedSelectedDays.update(() => _selectedDates);
 	}
 
 	function updateSelectedDates() {
@@ -245,6 +253,15 @@
 	}
 
 	function constructKey(date: Date): DAYS {
+		const d = new Date();
+		if (!date)
+			return {
+				date: d.getDate(),
+				month: d.getMonth(),
+				year: d.getFullYear(),
+				isCurrentMonth: false,
+				isToday: false
+			};
 		return {
 			date: date.getDate(),
 			month: date.getMonth(),
@@ -256,7 +273,7 @@
 
 	async function attachModal(newDate?: DAYS) {
 		await tick();
-		const id = newDate ? dayKey(newDate) : dayKey(selectedKey);
+		const id = newDate ? dayKey(newDate) : dayKey(selectedKeys?.[0]);
 		const element = document.getElementById(id);
 		if (selectedDayInfo) selectedDayInfo = { ...selectedDayInfo, id: element?.id };
 		if (element) clickPosition = element.getBoundingClientRect();
@@ -319,7 +336,7 @@
 	});
 
 	$effect(() => {
-		selectedDayInfo = selectedKey;
+		selectedDayInfo = selectedKeys?.[0];
 		attachModal();
 	});
 
@@ -334,7 +351,7 @@
 	<div class="h-14">something</div>
 
 	<div
-		class="w-full overflow-hidden rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90 shadow-2xl"
+		class="h-[calc(95vh-74px)] w-full overflow-hidden rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90 shadow-2xl"
 	>
 		{#key generatedDays}
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -343,7 +360,7 @@
 				style="grid-template-rows: repeat({rowCount()}, 1fr); grid-template-columns: repeat({colCount()}, minmax(0, 1fr)) "
 				onmouseleave={handleDragEnd}
 				onmouseup={handleMouseUp}
-				transition:blur={{ duration: 300 }}
+				transition:fade={{ duration: 300 }}
 			>
 				{#if generatedDays.length > 0}
 					{#each generatedDays as day, index (dayKey(day))}
@@ -360,7 +377,7 @@
 						 {!day.isCurrentMonth ? 'cursor-not-allowed' : ''}
 						 {paddingForTitle(day)}
 						 {(selectedDate === dayKey(day) && isModalOpen) ||
-							(dayKey(day) === dayKey(selectedKey) && $setModalState)
+							(dayKey(day) === dayKey(selectedKeys?.[0]) && $setModalState.show)
 								? '!bg-[#1e2c3b]/20 text-white'
 								: ''}
 							 
@@ -405,6 +422,6 @@
 	</div>
 </div>
 
-{#if isModalOpen || $setModalState}
+{#if isModalOpen || $setModalState.show}
 	<Modal {closeModal} {selectedDayInfo} {clickPosition} />
 {/if}

@@ -1,5 +1,18 @@
 import { writable } from 'svelte/store';
 
-export const selectedDay = writable(new Date());
+type DAYS = {
+	date: number;
+	isCurrentMonth: boolean;
+	isToday: boolean;
+	month: number;
+	year: number;
+	id?: string;
+	endDate?: DAYS;
+};
 
-export const setModalState = writable(false);
+export const storedSelectedDays = writable<DAYS[]>();
+
+export const setModalState = writable<{ show: boolean; type?: 'event' | 'task' | 'appointment' }>({
+	show: false,
+	type: 'event'
+});

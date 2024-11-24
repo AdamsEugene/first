@@ -32,7 +32,7 @@
 	let selectedMinute = $state('00');
 	let selectedPeriod = $state('AM');
 
-	let eventType = $state<'Event' | 'Task' | 'Schedule'>('Event'); // or 'Task'
+	let eventType = $state<'Event' | 'Task' | 'Appointment'>('Event'); // or 'Task'
 	let guests = $state<string[]>([]);
 	let location = $state('');
 	let meetLink = $state(false);
@@ -43,7 +43,7 @@
 	let repeatOption = $state('Does not repeat');
 	// svelte-ignore non_reactive_update
 
-	function toggleEventType(type: 'Event' | 'Task' | 'Schedule') {
+	function toggleEventType(type: 'Event' | 'Task' | 'Appointment') {
 		eventType = type;
 	}
 
@@ -59,7 +59,7 @@
 		showTimePicker = !showTimePicker;
 	}
 
-	let updatedClickPosition = $derived(() => {
+	let updatedClickPosition = $derived((): DOMRect => {
 		const element = document.getElementById(selectedDayInfo.id);
 		if (element) return element.getBoundingClientRect();
 		return clickPosition;
@@ -70,9 +70,9 @@
 			modalPosition = { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
 			return;
 		}
-		const updatedCP: DOMRect = updatedClickPosition();
+		const updatedCP = updatedClickPosition();
 
-		const modalWidth = 572;
+		const modalWidth = 500;
 		const modalHeight = 665;
 		const windowWidth = window.innerWidth;
 		const windowHeight = window.innerHeight;
@@ -126,6 +126,7 @@
 	}
 
 	function cleanupPositionObservers() {
+		if (!window) return;
 		window.removeEventListener('resize', calculatePositionThrottled);
 		calculatePositionThrottled.cancel();
 		if (observer) {
@@ -139,7 +140,7 @@
 	);
 
 	let datePresented = $derived((date: DAYS) =>
-		!date.endDate
+		!date?.endDate
 			? date?.date
 			: getDaysBetween(date, date.endDate) % 7
 				? `${getDaysBetween(date, date.endDate) + 1}d`
@@ -217,7 +218,7 @@
 
 <!-- Modal Content -->
 <div
-	class="modal absolute w-full max-w-[572px] rounded-3xl bg-slate-950 p-6 text-white/80 shadow-xl transition-all"
+	class="modal absolute w-full max-w-[500px] rounded-3xl bg-slate-950 p-6 text-white/80 shadow-xl transition-all"
 	style="left: {modalPosition.left}; top: {modalPosition.top}; transform: {modalPosition.transform}"
 	transition:flyAndScale={{ x: 0, duration: 300, startScale: 0.9 }}
 >
@@ -230,14 +231,14 @@
 		</div>
 		<div class="flex flex-col items-start">
 			<span class="text-lg font-semibold">
-				{#if selectedDayInfo.endDate}
+				{#if selectedDayInfo?.endDate}
 					From
 				{/if}
 				{selectedDay(selectedDayInfo).toLocaleDateString('en-US', { weekday: 'long' })}
-				{#if selectedDayInfo.endDate}
+				{#if selectedDayInfo?.endDate}
 					to
-					{selectedDay(selectedDayInfo.endDate).toLocaleDateString('en-US', { weekday: 'long' })}
-					({formatDateDifference(selectedDayInfo, selectedDayInfo.endDate)})
+					{selectedDay(selectedDayInfo?.endDate).toLocaleDateString('en-US', { weekday: 'long' })}
+					({formatDateDifference(selectedDayInfo, selectedDayInfo?.endDate)})
 				{/if}
 			</span>
 			<div class="flex items-center gap-2 text-sm text-gray-500">
@@ -248,10 +249,10 @@
 						year: 'numeric'
 					})}
 				</span>
-				{#if selectedDayInfo.endDate}
+				{#if selectedDayInfo?.endDate}
 					<span>- to -</span>
 					<span>
-						{selectedDay(selectedDayInfo.endDate).toLocaleDateString('en-US', {
+						{selectedDay(selectedDayInfo?.endDate).toLocaleDateString('en-US', {
 							month: 'long',
 							day: 'numeric',
 							year: 'numeric'
@@ -291,12 +292,12 @@
 				Task
 			</button>
 			<button
-				class="flex-1 rounded-md px-3 py-1 text-sm transition-colors {eventType === 'Schedule'
+				class="flex-1 rounded-md px-3 py-1 text-sm transition-colors {eventType === 'Appointment'
 					? 'bg-[#1e2c3b] text-white'
 					: 'text-gray-400 hover:text-white'}"
-				onclick={() => toggleEventType('Schedule')}
+				onclick={() => toggleEventType('Appointment')}
 			>
-				Schedule
+				Appointment
 			</button>
 		</div>
 
@@ -304,7 +305,7 @@
 			<div class="col-span-5 flex w-full gap-2">
 				<div class="relative w-full">
 					<!-- Date Display -->
-					<div class="flex items-center gap-2 text-sm text-gray-400">
+					<div class="flex items-center gap-2 text-xs text-gray-400">
 						<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
 							<path
 								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
@@ -317,19 +318,17 @@
 							{selectedDay(selectedDayInfo).toLocaleDateString('en-US', {
 								weekday: 'long',
 								month: 'long',
-								day: 'numeric',
-								year: 'numeric'
+								day: 'numeric'
 							})}
 						</span>
 						<span>-</span>
 						<span>
 							{selectedDay(
-								selectedDayInfo.endDate ? selectedDayInfo.endDate : selectedDayInfo
+								selectedDayInfo?.endDate ? selectedDayInfo?.endDate : selectedDayInfo
 							).toLocaleDateString('en-US', {
 								weekday: 'long',
 								month: 'long',
-								day: 'numeric',
-								year: 'numeric'
+								day: 'numeric'
 							})}
 						</span>
 						<button

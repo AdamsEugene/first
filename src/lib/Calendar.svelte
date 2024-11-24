@@ -14,7 +14,7 @@
 		User
 	} from 'lucide-svelte';
 
-	import { setModalState, selectedDay } from '../lib/utils/store';
+	import { setModalState, storedSelectedDays } from '../lib/utils/store';
 	import Dropdown from './components/Dropdown.svelte';
 
 	type DAYS = {
@@ -23,6 +23,8 @@
 		isToday: boolean;
 		month: number;
 		year: number;
+		id?: string;
+		endDate?: DAYS;
 	};
 
 	const options = [
@@ -139,7 +141,6 @@
 		isDragging = true;
 		dragStart = new Date(year, month, date);
 		dragEnd = dragStart;
-		selectedDay.update(() => dragStart as Date);
 		updateSelectedDates();
 	}
 
@@ -150,7 +151,20 @@
 	}
 
 	function handleDragEnd() {
+		let constructedKeys = selectedDates.map((day) => constructKey(day));
+		if (constructedKeys.length > 1) constructedKeys[0].endDate = constructedKeys.at(-1);
+		storedSelectedDays.update(() => constructedKeys);
 		isDragging = false;
+	}
+
+	function constructKey(date: Date): DAYS {
+		return {
+			date: date.getDate(),
+			month: date.getMonth(),
+			year: date.getFullYear(),
+			isCurrentMonth: false,
+			isToday: false
+		};
 	}
 
 	function updateSelectedDates() {
@@ -197,11 +211,7 @@
 	}
 
 	function setSelectedDate(type: 'event' | 'task' | 'appointment', event?: MouseEvent) {
-		console.log($selectedDay);
-		setModalState.update(() => true);
-
-		// isModalOpen = true;
-		// eventType = type === 'task' ? 'Task' : 'Event';
+		setModalState.update(() => ({ show: true, type }));
 	}
 
 	let ChevronIcon = $derived(isDropdownOpen ? ChevronUp : ChevronDown);
