@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import Modal from './components/Modal.svelte';
 	import { selectedDay, setModalState } from '../lib/utils/store';
-	import { fade } from 'svelte/transition';
+	import { fade, scale, blur, fly, slide } from 'svelte/transition';
 
 	interface DateRange {
 		allDates: Date[];
@@ -22,6 +22,8 @@
 		isToday: boolean;
 		month: number;
 		year: number;
+		id?: string;
+		endDate?: DAYS;
 	};
 
 	let selectedKey = $derived<DAYS>(constructKey($selectedDay));
@@ -114,9 +116,10 @@
 	function setSelectedDate(day: DAYS, event: MouseEvent) {
 		if (!day.isCurrentMonth) return;
 		selectedDate = dayKey(day);
-		selectedDayInfo = day;
 		const element = event.currentTarget as HTMLElement;
+		const id = element.id;
 		clickPosition = element.getBoundingClientRect();
+		selectedDayInfo = { ...day, id };
 		isModalOpen = true;
 	}
 
@@ -232,7 +235,10 @@
 	function handleMouseUp() {
 		if (isCorrectSelection) {
 			const lastDate = _selectedDates.at(-1);
-			if (lastDate) attachModal(constructKey(lastDate));
+			if (!lastDate) return;
+			const endDate = constructKey(lastDate);
+			attachModal(endDate);
+			if (selectedDayInfo) selectedDayInfo = { ...selectedDayInfo, endDate };
 			isModalOpen = true;
 		}
 		if (isDragging) handleDragEnd();
@@ -252,7 +258,7 @@
 		await tick();
 		const id = newDate ? dayKey(newDate) : dayKey(selectedKey);
 		const element = document.getElementById(id);
-
+		if (selectedDayInfo) selectedDayInfo = { ...selectedDayInfo, id: element?.id };
 		if (element) clickPosition = element.getBoundingClientRect();
 	}
 
@@ -328,68 +334,74 @@
 	<div class="h-14">something</div>
 
 	<div
-		class="w-full overflow-clip rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90 shadow-2xl"
+		class="w-full overflow-hidden rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90 shadow-2xl"
 	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="grid h-[calc(95vh-74px)]"
-			style="grid-template-rows: repeat({rowCount()}, 1fr); grid-template-columns: repeat({colCount()}, minmax(0, 1fr))"
-			onmouseleave={handleDragEnd}
-			onmouseup={handleMouseUp}
-		>
-			{#if generatedDays.length > 0}
-				{#each generatedDays as day, index (dayKey(day))}
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div
-						id={dayKey(day)}
-						class="group relative flex w-full cursor-pointer
-						select-none flex-col gap-2 rounded-xl
-						border border-[#1e2c3b] py-2
-						text-white/80 transition-all duration-300
-						ease-in-out hover:scale-[0.97] hover:bg-[#1e2c3b]/20
-						hover:shadow-lg
-						{!day.isCurrentMonth ? 'cursor-not-allowed' : ''}
-						{paddingForTitle(day)}
-						{(selectedDate === dayKey(day) && isModalOpen) ||
-						(dayKey(day) === dayKey(selectedKey) && $setModalState)
-							? '!bg-[#1e2c3b]/20 text-white'
-							: ''}
-							
-			  "
-						onmousedown={() => handleDragStart(day)}
-						onmouseenter={() => handleDragMove(day)}
-						onmouseup={handleDragEnd}
-						onclick={(e) => setSelectedDate(day, e)}
-					>
-						<div class="flex w-full justify-center text-sm">{weekDays[index]}</div>
+		{#key generatedDays}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="grid h-[calc(95vh-74px)]"
+				style="grid-template-rows: repeat({rowCount()}, 1fr); grid-template-columns: repeat({colCount()}, minmax(0, 1fr)) "
+				onmouseleave={handleDragEnd}
+				onmouseup={handleMouseUp}
+				transition:blur={{ duration: 300 }}
+			>
+				{#if generatedDays.length > 0}
+					{#each generatedDays as day, index (dayKey(day))}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="flex rounded-full p-1 text-center
-				text-sm
-				font-medium transition-all duration-300 ease-in-out
-				group-hover:text-white
-				{!day.isCurrentMonth ? 'text-white/25' : ''}
-				{paddingForTitleCont(day)}
-				{day.isToday && day.isCurrentMonth
-								? 'h-10 w-10 items-center justify-center  bg-black/70 text-white'
-								: ''}"
+							id={dayKey(day)}
+							class="group relative flex w-full cursor-pointer
+						 select-none flex-col gap-2 rounded-xl
+						 border border-[#1e2c3b] py-2
+						 text-white/80 transition-all duration-300
+						 ease-in-out hover:scale-[0.97] hover:bg-[#1e2c3b]/20
+						 hover:shadow-lg
+						 {!day.isCurrentMonth ? 'cursor-not-allowed' : ''}
+						 {paddingForTitle(day)}
+						 {(selectedDate === dayKey(day) && isModalOpen) ||
+							(dayKey(day) === dayKey(selectedKey) && $setModalState)
+								? '!bg-[#1e2c3b]/20 text-white'
+								: ''}
+							 
+			   "
+							onmousedown={() => handleDragStart(day)}
+							onmouseenter={() => handleDragMove(day)}
+							onmouseup={handleDragEnd}
+							onclick={(e) => setSelectedDate(day, e)}
 						>
-							{day.date}
-						</div>
-						{#if isPartOfSelectedDay(day) && (isModalOpen || isDragging)}
+							<div class="flex w-full justify-center text-sm">{weekDays[index]}</div>
 							<div
-								class="w-full bg-teal-900 px-2 py-[2px] text-xs {roundedForTitle(day)}"
-								in:fade={{ duration: 500 }}
+								class="flex rounded-full p-1 text-center
+				 text-sm
+				 font-medium transition-all duration-300 ease-in-out
+				 group-hover:text-white
+				 {!day.isCurrentMonth ? '!text-white/25' : ''}
+				 {paddingForTitleCont(day)}
+				 {day.isToday && day.isCurrentMonth
+									? 'h-10 w-10 items-center justify-center  bg-black/70 text-white'
+									: ''}"
 							>
-								(no title)
+								{day.date}
 							</div>
-						{/if}
-					</div>
-				{/each}
-			{:else}
-				<div class="loading">Loading...</div>
-			{/if}
-		</div>
+							{#if isPartOfSelectedDay(day) && (isModalOpen || isDragging)}
+								<div
+									class="w-full bg-teal-900 px-2 py-[2px] text-xs {roundedForTitle(day)}"
+									in:fade={{ duration: 500 }}
+								>
+									(no title)
+								</div>
+							{/if}
+							<!-- <div class="w-full bg-orange-900 px-2 py-[2px] text-xs" in:fade={{ duration: 500 }}>
+							 holiday
+						 </div> -->
+						</div>
+					{/each}
+				{:else}
+					<div class="loading">Loading...</div>
+				{/if}
+			</div>
+		{/key}
 	</div>
 </div>
 

@@ -1,19 +1,31 @@
 <script lang="ts">
+	type DAYS = {
+		date: number;
+		isCurrentMonth: boolean;
+		isToday: boolean;
+		month: number;
+		year: number;
+		endDate?: DAYS;
+		id?: string;
+	};
+
 	import { onDestroy, onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
-	import { fade, fly, scale } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 	import { throttle } from '../utils/functions';
 	import Textarea from './Textarea.svelte';
 	import Input from './Input.svelte';
 
 	let { closeModal, selectedDayInfo, clickPosition } = $props<{
 		closeModal: () => void;
-		selectedDayInfo: any;
+		selectedDayInfo: DAYS | null;
 		clickPosition: DOMRect | null;
 	}>();
 
 	let modalPosition = $state({ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' });
 	let observer: ResizeObserver | null = null;
+	// let updatedClickPosition = $state(clickPosition);
+	// $inspect(updatedClickPosition);
 
 	let showTimePicker = $state(false);
 	let selectedHour = $state('12');
@@ -30,7 +42,6 @@
 	let visibility = $state('Free');
 	let repeatOption = $state('Does not repeat');
 	// svelte-ignore non_reactive_update
-	let direction = 'left';
 
 	function toggleEventType(type: 'Event' | 'Task' | 'Schedule') {
 		eventType = type;
@@ -48,40 +59,57 @@
 		showTimePicker = !showTimePicker;
 	}
 
+	let updatedClickPosition = $derived(() => {
+		const element = document.getElementById(selectedDayInfo.id);
+		if (element) return element.getBoundingClientRect();
+		return clickPosition;
+	});
+
 	const calculatePositionThrottled = throttle(() => {
 		if (!clickPosition) {
 			modalPosition = { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' };
 			return;
 		}
+		const updatedCP: DOMRect = updatedClickPosition();
 
-		const modalWidth = 500;
+		const modalWidth = 572;
 		const modalHeight = 665;
 		const windowWidth = window.innerWidth;
 		const windowHeight = window.innerHeight;
 
-		const shouldShowOnLeft =
-			clickPosition.left + clickPosition.width + modalWidth + 20 > windowWidth;
+		// Check if there's enough space on either side
+		const spaceOnRight = windowWidth - (updatedCP.left + updatedCP.width + modalWidth + 20);
+		const spaceOnLeft = updatedCP.left - (modalWidth + 20);
+		const needsCentering = spaceOnRight < 0 && spaceOnLeft < 0;
 
-		let left = shouldShowOnLeft
-			? `${clickPosition.left - modalWidth - 10}px`
-			: `${clickPosition.left + clickPosition.width + 10}px`;
-
-		direction = shouldShowOnLeft ? 'left' : 'right';
-
-		let top = `${clickPosition.top}px`;
+		let left;
 		let transform = 'none';
 
-		const elementPosition = Math.round(clickPosition.top * 2 + clickPosition.height);
-		const viewportHeight = Math.round(windowHeight);
+		if (needsCentering) {
+			// Center horizontally if no space on either side
+			left = '50%';
+			transform = 'translateX(-50%)';
+		} else {
+			// Original logic for left/right positioning
+			const shouldShowOnLeft = updatedCP.left + updatedCP.width + modalWidth + 20 > windowWidth;
+			left = shouldShowOnLeft
+				? `${updatedCP.left - modalWidth - 10}px`
+				: `${updatedCP.left + updatedCP.width + 10}px`;
+		}
 
+		// Handle vertical positioning
+		let top = `${updatedCP.top}px`;
+
+		const elementPosition = Math.round(updatedCP.top * 2 + updatedCP.height);
+		const viewportHeight = Math.round(windowHeight);
 		const isInMiddleRange = Math.abs(elementPosition - viewportHeight - 72) <= 10;
 
 		if (isInMiddleRange) {
-			top = `${clickPosition.top + clickPosition.height / 2}px`;
-			transform = 'translateY(-50%)';
-		} else if (clickPosition.top + modalHeight > windowHeight) {
-			top = `${clickPosition.top + clickPosition.height}px`;
-			transform = 'translateY(-100%)';
+			top = `${updatedCP.top + updatedCP.height / 2}px`;
+			transform = needsCentering ? 'translate(-50%, -50%)' : 'translateY(-50%)';
+		} else if (updatedCP.top + modalHeight > windowHeight) {
+			top = `${updatedCP.top + updatedCP.height}px`;
+			transform = needsCentering ? 'translate(-50%, -100%)' : 'translateY(-100%)';
 		}
 
 		modalPosition = { left, top, transform };
@@ -104,6 +132,49 @@
 			observer.disconnect();
 			observer = null;
 		}
+	}
+
+	let selectedDay = $derived(
+		(date: DAYS) => new Date(date?.year ?? 0, date?.month ?? 0, date?.date ?? 0)
+	);
+
+	let datePresented = $derived((date: DAYS) =>
+		!date.endDate
+			? date?.date
+			: getDaysBetween(date, date.endDate) % 7
+				? `${getDaysBetween(date, date.endDate) + 1}d`
+				: `${getWeeksBetween(date, date.endDate)}w`
+	);
+
+	function getDaysBetween(date1: DAYS, date2: DAYS) {
+		const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+		const firstDate = new Date(date1?.year ?? 0, date1?.month ?? 0, date1?.date ?? 0);
+		const secondDate = new Date(date2?.year ?? 0, date2?.month ?? 0, date2?.date ?? 0);
+
+		// Math.abs to handle dates in any order
+		const diffDays = Math.abs(Math.round((firstDate.getTime() - secondDate.getTime()) / oneDay));
+
+		return diffDays;
+	}
+
+	// Weeks between dates
+	function getWeeksBetween(date1: DAYS, date2: DAYS) {
+		const days = getDaysBetween(date1, date2);
+		return Math.ceil(days / 7);
+	}
+
+	function formatDateDifference(startDate: DAYS, endDate: DAYS): string {
+		const daysBetween = getDaysBetween(startDate, endDate);
+		const weeks = Math.floor(daysBetween / 7);
+		const remainingDays = (daysBetween % 7) + 1;
+
+		const weekText = weeks > 0 ? `${weeks} week${weeks > 1 ? 's' : ''}` : '';
+		const dayText = remainingDays > 0 ? `${remainingDays} day${remainingDays > 1 ? 's' : ''}` : '';
+
+		if (!weekText) return dayText || '0 days';
+		if (!dayText) return weekText;
+
+		return `${weekText} ${dayText}`;
 	}
 
 	function flyAndScale(
@@ -146,34 +217,48 @@
 
 <!-- Modal Content -->
 <div
-	class="modal absolute w-full max-w-[500px] rounded-3xl bg-slate-950 p-6 text-white/80 shadow-xl transition-all"
+	class="modal absolute w-full max-w-[572px] rounded-3xl bg-slate-950 p-6 text-white/80 shadow-xl transition-all"
 	style="left: {modalPosition.left}; top: {modalPosition.top}; transform: {modalPosition.transform}"
 	transition:flyAndScale={{ x: 0, duration: 300, startScale: 0.9 }}
 >
 	<!-- Header -->
 	<div class="mb-6 flex items-center gap-4">
-		<div class="flex h-12 w-12 items-center justify-center rounded-full bg-[#1e2c3b] text-white">
-			{selectedDayInfo?.date}
+		<div
+			class="flex h-12 min-w-12 items-center justify-center rounded-full bg-[#1e2c3b] text-white"
+		>
+			{datePresented(selectedDayInfo)}
 		</div>
 		<div class="flex flex-col items-start">
 			<span class="text-lg font-semibold">
-				{new Date(
-					selectedDayInfo?.year ?? 0,
-					selectedDayInfo?.month ?? 0,
-					selectedDayInfo?.date ?? 0
-				).toLocaleDateString('en-US', { weekday: 'long' })}
+				{#if selectedDayInfo.endDate}
+					From
+				{/if}
+				{selectedDay(selectedDayInfo).toLocaleDateString('en-US', { weekday: 'long' })}
+				{#if selectedDayInfo.endDate}
+					to
+					{selectedDay(selectedDayInfo.endDate).toLocaleDateString('en-US', { weekday: 'long' })}
+					({formatDateDifference(selectedDayInfo, selectedDayInfo.endDate)})
+				{/if}
 			</span>
-			<span class="text-sm text-gray-500">
-				{new Date(
-					selectedDayInfo?.year ?? 0,
-					selectedDayInfo?.month ?? 0,
-					selectedDayInfo?.date ?? 0
-				).toLocaleDateString('en-US', {
-					month: 'long',
-					day: 'numeric',
-					year: 'numeric'
-				})}
-			</span>
+			<div class="flex items-center gap-2 text-sm text-gray-500">
+				<span>
+					{selectedDay(selectedDayInfo).toLocaleDateString('en-US', {
+						month: 'long',
+						day: 'numeric',
+						year: 'numeric'
+					})}
+				</span>
+				{#if selectedDayInfo.endDate}
+					<span>- to -</span>
+					<span>
+						{selectedDay(selectedDayInfo.endDate).toLocaleDateString('en-US', {
+							month: 'long',
+							day: 'numeric',
+							year: 'numeric'
+						})}
+					</span>
+				{/if}
+			</div>
 		</div>
 	</div>
 
@@ -206,7 +291,7 @@
 				Task
 			</button>
 			<button
-				class="flex-1 rounded-md px-3 py-1 text-sm transition-colors {eventType === 'Task'
+				class="flex-1 rounded-md px-3 py-1 text-sm transition-colors {eventType === 'Schedule'
 					? 'bg-[#1e2c3b] text-white'
 					: 'text-gray-400 hover:text-white'}"
 				onclick={() => toggleEventType('Schedule')}
@@ -229,10 +314,17 @@
 							/>
 						</svg>
 						<span>
-							{new Date(
-								selectedDayInfo?.year ?? 0,
-								selectedDayInfo?.month ?? 0,
-								selectedDayInfo?.date ?? 0
+							{selectedDay(selectedDayInfo).toLocaleDateString('en-US', {
+								weekday: 'long',
+								month: 'long',
+								day: 'numeric',
+								year: 'numeric'
+							})}
+						</span>
+						<span>-</span>
+						<span>
+							{selectedDay(
+								selectedDayInfo.endDate ? selectedDayInfo.endDate : selectedDayInfo
 							).toLocaleDateString('en-US', {
 								weekday: 'long',
 								month: 'long',
