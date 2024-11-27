@@ -12,6 +12,8 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
+	import { spring } from 'svelte/motion';
+
 	import { throttle } from '../utils/functions';
 	import Textarea from './Textarea.svelte';
 	import Input from './Input.svelte';
@@ -60,7 +62,7 @@
 	}
 
 	let updatedClickPosition = $derived((): DOMRect => {
-		const element = document.getElementById(selectedDayInfo.id);
+		const element = document.getElementById(selectedDayInfo?.id);
 		if (element) return element.getBoundingClientRect();
 		return clickPosition;
 	});

@@ -2,7 +2,8 @@
 	import { onMount, tick } from 'svelte';
 	import Modal from './components/Modal.svelte';
 	import { storedSelectedDays, setModalState } from '../lib/utils/store';
-	import { fade } from 'svelte/transition';
+	import { fade, slide } from 'svelte/transition';
+	import InDay from './components/InDay.svelte';
 
 	interface DateRange {
 		allDates: Date[];
@@ -27,6 +28,9 @@
 	};
 
 	let selectedKeys = $derived<DAYS[]>($storedSelectedDays);
+	let storedSelectedToDates = $derived(
+		$storedSelectedDays?.map((date) => new Date(date.year, date.month, date.date)) || []
+	);
 
 	let { selectedDates = null } = $props<{ selectedDates: DateRange | null }>();
 
@@ -57,6 +61,16 @@
 	let clickPosition: DOMRect | null = $state(null);
 
 	let weekDays = $state(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+
+	const events = [
+		{
+			title:
+				'Nkrumah Adams Eugene and Jared Ghobrial, 1:45pm, Google Meet (instructions in description)',
+			startTime: '13:45',
+			endTime: '14:45',
+			color: '#0284c7' // Could use Tailwind classes instead
+		}
+	];
 
 	function generateCalendar(month: number, year: number) {
 		const firstDay = new Date(year, month, 1);
@@ -120,6 +134,7 @@
 		const id = element.id;
 		clickPosition = element.getBoundingClientRect();
 		selectedDayInfo = { ...day, id };
+
 		isModalOpen = true;
 	}
 
@@ -128,8 +143,8 @@
 		setModalState.update(() => ({ show: false }));
 	}
 
-	let rowCount = $derived(() => Math.ceil(generatedDays.length / 7));
-	let colCount = $derived(() => weekDays.length);
+	let rowCount = $derived(Math.ceil(generatedDays.length / 7));
+	let colCount = $derived(weekDays.length);
 	let doNotRegenerate = $derived(
 		days?.length > 1
 			? false
@@ -236,17 +251,21 @@
 		// }
 
 		_selectedDates = dates;
+		storedSelectedDays.update(() => []);
 
 		// console.log(_selectedDates);
 	}
 
 	function handleMouseUp() {
 		if (isCorrectSelection) {
+			const firstDate = _selectedDates[0];
 			const lastDate = _selectedDates.at(-1);
-			if (!lastDate) return;
+			if (!lastDate || !firstDate) return;
+			const startDate = constructKey(firstDate);
 			const endDate = constructKey(lastDate);
+			startDate.endDate = endDate;
 			attachModal(endDate);
-			if (selectedDayInfo) selectedDayInfo = { ...selectedDayInfo, endDate };
+			selectedDayInfo = startDate;
 			isModalOpen = true;
 		}
 		if (isDragging) handleDragEnd();
@@ -279,8 +298,8 @@
 		if (element) clickPosition = element.getBoundingClientRect();
 	}
 
-	let isPartOfSelectedDay = $derived((day: DAYS) =>
-		_selectedDates.some(
+	let isPartOfSelectedDay = $derived((selectedDays: Date[], day: DAYS) =>
+		selectedDays.some(
 			(selectedDate) =>
 				selectedDate.getDate() === day.date &&
 				selectedDate.getMonth() === day.month &&
@@ -288,10 +307,10 @@
 		)
 	);
 
-	let generateStartMiddleClass = $derived((day: DAYS) => {
-		if (_selectedDates.length === 1) return 'just_one';
+	let generateStartMiddleClass = $derived((selectedDays: Date[], day: DAYS) => {
+		if (selectedDays.length === 1) return 'just_one';
 
-		const matchIndex = _selectedDates.findIndex(
+		const matchIndex = selectedDays.findIndex(
 			(selectedDate) =>
 				selectedDate.getDate() === day.date &&
 				selectedDate.getMonth() === day.month &&
@@ -300,12 +319,12 @@
 
 		if (matchIndex === -1) return '';
 		if (matchIndex === 0) return 'start';
-		if (matchIndex === _selectedDates.length - 1) return 'end';
+		if (matchIndex === selectedDays.length - 1) return 'end';
 		return 'middle';
 	});
 
-	let paddingForTitle = $derived((day: DAYS) => {
-		const position = generateStartMiddleClass(day);
+	let paddingForTitle = $derived((selectedDays: Date[], day: DAYS) => {
+		const position = generateStartMiddleClass(selectedDays, day);
 		return (
 			{
 				start: 'pl-2',
@@ -317,8 +336,8 @@
 		);
 	});
 
-	let roundedForTitle = $derived((day: DAYS) => {
-		const position = generateStartMiddleClass(day);
+	let roundedForTitle = $derived((selectedDays: Date[], day: DAYS) => {
+		const position = generateStartMiddleClass(selectedDays, day);
 		return (
 			{
 				start: 'rounded-l-3xl',
@@ -330,13 +349,16 @@
 		);
 	});
 
-	let paddingForTitleCont = $derived((day: DAYS) => {
-		const position = generateStartMiddleClass(day);
+	let paddingForTitleCont = $derived((selectedDays: Date[], day: DAYS) => {
+		const position = generateStartMiddleClass(selectedDays, day);
 		return ['middle', 'end'].includes(position) ? 'px-3' : '';
 	});
 
+	let datesToUse = $derived(_selectedDates.length > 0 ? _selectedDates : storedSelectedToDates);
+
 	$effect(() => {
 		selectedDayInfo = selectedKeys?.[0];
+		if (selectedKeys?.length > 1) _selectedDates = [];
 		attachModal();
 	});
 
@@ -353,72 +375,79 @@
 	<div
 		class="h-[calc(95vh-74px)] w-full overflow-hidden rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90 shadow-2xl"
 	>
-		{#key generatedDays}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="grid h-[calc(95vh-74px)]"
-				style="grid-template-rows: repeat({rowCount()}, 1fr); grid-template-columns: repeat({colCount()}, minmax(0, 1fr)) "
-				onmouseleave={handleDragEnd}
-				onmouseup={handleMouseUp}
-				transition:fade={{ duration: 300 }}
-			>
-				{#if generatedDays.length > 0}
-					{#each generatedDays as day, index (dayKey(day))}
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div
-							id={dayKey(day)}
-							class="group relative flex w-full cursor-pointer
-						 select-none flex-col gap-2 rounded-xl
-						 border border-[#1e2c3b] py-2
-						 text-white/80 transition-all duration-300
-						 ease-in-out hover:scale-[0.97] hover:bg-[#1e2c3b]/20
-						 hover:shadow-lg
-						 {!day.isCurrentMonth ? 'cursor-not-allowed' : ''}
-						 {paddingForTitle(day)}
-						 {(selectedDate === dayKey(day) && isModalOpen) ||
-							(dayKey(day) === dayKey(selectedKeys?.[0]) && $setModalState.show)
-								? '!bg-[#1e2c3b]/20 text-white'
-								: ''}
-							 
-			   "
-							onmousedown={() => handleDragStart(day)}
-							onmouseenter={() => handleDragMove(day)}
-							onmouseup={handleDragEnd}
-							onclick={(e) => setSelectedDate(day, e)}
-						>
-							<div class="flex w-full justify-center text-sm">{weekDays[index]}</div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		{#if generatedDays.length > 0}
+			{#if selectedKeys?.length > 1 && selectedKeys?.length <= 7}
+				{#key generatedDays}
+					<InDay {events} {rowCount} {weekDays} {generatedDays} />
+				{/key}
+			{:else}
+				{#key generatedDays}
+					<div
+						class="grid h-[calc(95vh-74px)]"
+						style="grid-template-rows: repeat({rowCount}, 1fr); grid-template-columns: repeat({colCount}, minmax(0, 1fr)) "
+						onmouseleave={handleDragEnd}
+						onmouseup={handleMouseUp}
+						transition:fade={{ duration: 300 }}
+					>
+						{#each generatedDays as day, index (dayKey(day))}
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div
-								class="flex rounded-full p-1 text-center
-				 text-sm
-				 font-medium transition-all duration-300 ease-in-out
-				 group-hover:text-white
-				 {!day.isCurrentMonth ? '!text-white/25' : ''}
-				 {paddingForTitleCont(day)}
-				 {day.isToday && day.isCurrentMonth
-									? 'h-10 w-10 items-center justify-center  bg-black/70 text-white'
-									: ''}"
+								id={dayKey(day)}
+								class="group relative flex w-full cursor-pointer
+							 select-none flex-col gap-2
+							 rounded-xl border border-[#1e2c3b] py-2
+							 text-white/80 transition-all duration-300
+							 ease-in-out hover:scale-[0.999] hover:bg-[#1e2c3b]/20
+							 hover:shadow-lg
+							 {!day.isCurrentMonth ? 'cursor-not-allowed' : ''}
+							 {paddingForTitle(datesToUse, day)}
+							 {(selectedDate === dayKey(day) && isModalOpen) ||
+								(dayKey(day) === dayKey(selectedKeys?.[0]) && $setModalState.show)
+									? '!bg-[#1e2c3b]/20 text-white'
+									: ''}
+								 
+				   "
+								onmousedown={() => handleDragStart(day)}
+								onmouseenter={() => handleDragMove(day)}
+								onmouseup={handleDragEnd}
+								onclick={(e) => setSelectedDate(day, e)}
 							>
-								{day.date}
-							</div>
-							{#if isPartOfSelectedDay(day) && (isModalOpen || isDragging)}
+								<div class="flex w-full justify-center text-sm uppercase">{weekDays[index]}</div>
 								<div
-									class="w-full bg-teal-900 px-2 py-[2px] text-xs {roundedForTitle(day)}"
-									in:fade={{ duration: 500 }}
+									class="flex rounded-full p-1 text-center
+					 text-sm
+					 font-medium transition-all duration-300 ease-in-out
+					 group-hover:text-white
+					 {!day.isCurrentMonth ? '!text-white/25' : ''}
+					 {paddingForTitleCont(datesToUse, day)}
+					 {day.isToday && day.isCurrentMonth
+										? 'h-10 w-10 items-center justify-center  bg-black/70 text-white'
+										: ''}"
 								>
-									(no title)
+									{day.date}
 								</div>
-							{/if}
+								{#if isPartOfSelectedDay(datesToUse, day) && (isModalOpen || isDragging || $setModalState.show)}
+									<div
+										class="w-full bg-teal-900 px-2 py-[2px] text-xs
+									{roundedForTitle(datesToUse, day)}"
+										in:fade={{ duration: 500 }}
+									>
+										(no title)
+									</div>
+								{/if}
+							</div>
 							<!-- <div class="w-full bg-orange-900 px-2 py-[2px] text-xs" in:fade={{ duration: 500 }}>
-							 holiday
-						 </div> -->
-						</div>
-					{/each}
-				{:else}
-					<div class="loading">Loading...</div>
-				{/if}
-			</div>
-		{/key}
+								 holiday
+							 </div> -->
+						{/each}
+					</div>
+				{/key}
+			{/if}
+		{:else}
+			<div class="loading">Loading...</div>
+		{/if}
 	</div>
 </div>
 

@@ -11,4 +11,11 @@ body {
 	box-sizing: border-box;
 	padding: 0;
 	margin: 0;
+
+	::-webkit-scrollbar {
+		display: none;
+	}
+
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
 }

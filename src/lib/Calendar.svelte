@@ -214,6 +214,44 @@
 		setModalState.update(() => ({ show: true, type }));
 	}
 
+	let generateStartMiddleClass = $derived((day: DAYS) => {
+		if (selectedDates.length === 1) return 'just_one';
+
+		const matchIndex = selectedDates.findIndex(
+			(selectedDate) =>
+				selectedDate.getDate() === day.date &&
+				selectedDate.getMonth() === day.month &&
+				selectedDate.getFullYear() === day.year
+		);
+
+		if (matchIndex === -1) return '';
+		if (matchIndex === 0) return 'start';
+		if (matchIndex === selectedDates.length - 1) return 'end';
+		return 'middle';
+	});
+
+	let roundedForTitle = $derived((day: DAYS) => {
+		const position = generateStartMiddleClass(day);
+		return (
+			{
+				start: 'rounded-l-3xl',
+				end: 'rounded-r-3xl',
+				just_one: 'rounded-3xl',
+				middle: '',
+				'': ''
+			}[position] || ''
+		);
+	});
+
+	let isPartOfSelectedDay = $derived((day: DAYS) =>
+		selectedDates.some(
+			(selectedDate) =>
+				selectedDate.getDate() === day.date &&
+				selectedDate.getMonth() === day.month &&
+				selectedDate.getFullYear() === day.year
+		)
+	);
+
 	let ChevronIcon = $derived(isDropdownOpen ? ChevronUp : ChevronDown);
 
 	$effect(() => {
@@ -313,7 +351,7 @@
 
 		<div class="grid w-full grid-cols-7 text-center">
 			{#each weekDays as day}
-				<div class="text-xs">{day}</div>
+				<div class="text-xs uppercase">{day}</div>
 			{/each}
 		</div>
 
@@ -322,16 +360,12 @@
 				<button
 					class="
           cursor-pointer rounded p-2 text-center text-xs hover:bg-[#1e2c3b]/50
+		  {roundedForTitle({ date, isCurrentMonth, isToday, month, year })}
           {!isCurrentMonth ? 'text-gray-600' : ''}
-          {selectedDates.some(
-						(selectedDate) =>
-							selectedDate.getDate() === date &&
-							selectedDate.getMonth() === month &&
-							selectedDate.getFullYear() === year
-					)
+          {isPartOfSelectedDay({ date, isCurrentMonth, isToday, month, year })
 						? '!bg-[#1e2c3b] text-white hover:bg-[#1e2c3b]/90'
 						: ''}
-        "
+						"
 					onmousedown={() => handleDragStart(date, month, year, isCurrentMonth)}
 					onmouseenter={() => handleDragMove(date, month, year, isCurrentMonth)}
 					onmouseup={handleDragEnd}
