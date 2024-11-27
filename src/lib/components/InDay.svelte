@@ -29,6 +29,16 @@
 		return i === 0 ? hour : `${hour} ${ampm}`;
 	});
 
+	// Generate 5-minute intervals for each hour
+	const timeIntervals = Array.from({ length: 24 * 12 }, (_, i) => {
+		const isHourMark = i % 12 === 0;
+		const minute = (i % 12) * 5;
+		const hour = Math.floor(i / 12);
+		return { isHourMark, minute, hour };
+	});
+
+	// console.log(timeIntervals);
+
 	function getEventPosition(event: Event) {
 		const [startHour] = event.startTime.split(':').map(Number);
 		const [endHour] = event.endTime.split(':').map(Number);
@@ -38,16 +48,23 @@
 
 		return { top, height };
 	}
+
+	function handleTimeClick(week: string, hour: string | number, minute: number) {
+		console.log({ week, hour, minute });
+	}
 </script>
 
 <div
-	class="ml-[60px] grid h-24 overflow-y-auto"
+	class="ml-[60px] grid h-20 overflow-y-auto"
 	style="grid-template-rows: repeat({rowCount}, 1fr); grid-template-columns: repeat({weekDays.length}, minmax(0, 1fr)) "
 >
 	{#each weekDays as week, index}
 		<div class="flex w-full flex-col items-center gap-2 pt-3 text-xs uppercase">
 			<span> {week}</span>
-			<div class="flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-xl">
+			<div
+				class="flex h-10 w-10 items-center justify-center rounded-full text-xl
+                {generatedDays[index].date === 3 ? 'bg-black/70 ' : 'bg-black/10'} "
+			>
 				{generatedDays[index].date}
 			</div>
 		</div>
@@ -56,39 +73,43 @@
 
 <div class="flex h-[80vh] w-full overflow-y-auto">
 	<!-- Time markers -->
-	<div class=" -left-[60px] -top-2.5 h-full w-[60px]">
+	<div class="-mt-[6px] h-full w-[60px] pt-3">
 		{#each hours as hour}
-			<div class="flex h-[50px] justify-end text-xs">
-				<span>{hour}</span>
+			<div class="sticky top-0 z-10 flex h-[60px] justify-end bg-inherit text-xs">
+				<span class="h-min w-full bg-[#232426C9]/70 text-right">{hour}</span>
 			</div>
 		{/each}
 	</div>
 	<div
-		class="grid w-full px-4 pb-4"
+		class="grid w-full px-4 pb-4 pt-3"
 		style="grid-template-rows: repeat({rowCount}, 1fr); grid-template-columns: repeat({weekDays.length}, minmax(0, 1fr)) "
 	>
 		{#each weekDays as week, index}
 			<div
-				class="relative row-span-full flex text-gray-400
+				class="pointer-events-auto relative row-span-full flex text-gray-400
                 "
 			>
 				<!-- Grid lines -->
-				<div class="absolute inset-0">
-					{#each hours as hour}
+				<div class="pointer-events-auto absolute inset-0 z-10">
+					{#each timeIntervals as { hour, isHourMark, minute }}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="h-[50px] border-l border-t {index === weekDays.length - 1
-								? 'border-r'
-								: ''} border-gray-700"
+							class="h-[5px] border-l border-t
+                            {index === weekDays.length - 1 ? 'border-r' : ''}
+                            {isHourMark ? 'border-t-gray-700' : 'border-t-gray-700/10'}
+                            border-gray-700"
+							onclick={() => handleTimeClick(week, hour, minute)}
 						></div>
 					{/each}
 				</div>
 
 				<!-- Events -->
-				<div class="absolute inset-0">
+				<div class="pointer-events-auto absolute inset-0">
 					{#each events as event}
 						{@const position = getEventPosition(event)}
 						<div
-							class="absolute inset-x-0 overflow-hidden rounded bg-sky-600 p-2 text-sm text-white"
+							class="absolute inset-x-0 overflow-hidden rounded bg-sky-600/50 p-2 text-xs text-white"
 							style="top: {position.top}; height: {position.height};"
 						>
 							<span class="block truncate">
