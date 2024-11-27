@@ -29,14 +29,13 @@
 		return i === 0 ? hour : `${hour} ${ampm}`;
 	});
 
-	// Generate 5-minute intervals for each hour
-	const timeIntervals = Array.from({ length: 24 * 12 }, (_, i) => {
-		const isHourMark = i % 12 === 0;
-		const minute = (i % 12) * 5;
-		const hour = Math.floor(i / 12);
+	// Generate 15-minute intervals for each hour
+	const timeIntervals = Array.from({ length: 24 * 4 }, (_, i) => {
+		const isHourMark = i % 4 === 0;
+		const minute = (i % 4) * 15;
+		const hour = Math.floor(i / 4);
 		return { isHourMark, minute, hour };
 	});
-
 	// console.log(timeIntervals);
 
 	function getEventPosition(event: Event) {
@@ -95,10 +94,10 @@
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="h-[5px] border-l border-t
+							class="h-[15px] border-l border-t
                             {index === weekDays.length - 1 ? 'border-r' : ''}
-                            {isHourMark ? 'border-t-gray-700' : 'border-t-gray-700/10'}
-                            border-gray-700"
+                            {isHourMark ? 'border-t-white/50' : 'border-t-white/0'}
+                            border-white/50"
 							onclick={() => handleTimeClick(week, hour, minute)}
 						></div>
 					{/each}
