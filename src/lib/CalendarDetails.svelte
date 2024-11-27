@@ -373,7 +373,7 @@
 	<div class="h-14">something</div>
 
 	<div
-		class="h-[calc(95vh-74px)] w-full overflow-hidden rounded-3xl border border-[#1e2c3b] bg-[#232426C9]/90 shadow-2xl"
+		class="h-[calc(95vh-74px)] w-full overflow-hidden rounded-3xl border border-gray-600 bg-[#232426C9]/90 shadow-2xl"
 	>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		{#if generatedDays.length > 0}
@@ -397,10 +397,9 @@
 								id={dayKey(day)}
 								class="group relative flex w-full cursor-pointer
 							 select-none flex-col gap-2
-							 rounded-xl border border-[#1e2c3b] py-2
+							 rounded-xl border border-gray-600 py-2
 							 text-white/80 transition-all duration-300
 							 ease-in-out hover:scale-[0.999] hover:bg-[#1e2c3b]/20
-							 hover:shadow-lg
 							 {!day.isCurrentMonth ? 'cursor-not-allowed' : ''}
 							 {paddingForTitle(datesToUse, day)}
 							 {(selectedDate === dayKey(day) && isModalOpen) ||

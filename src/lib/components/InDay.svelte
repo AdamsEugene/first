@@ -94,10 +94,10 @@
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="h-[15px] border-l border-t
-                            {index === weekDays.length - 1 ? 'border-r' : ''}
-                            {isHourMark ? 'border-t-white/50' : 'border-t-white/0'}
-                            border-white/50"
+							class="h-[15px] border-l-2 border-t-2
+                            {index === weekDays.length - 1 ? 'border-r-2' : ''}
+                            {isHourMark ? 'border-t-gray-600' : 'border-t-white/0'}
+                            border-gray-600"
 							onclick={() => handleTimeClick(week, hour, minute)}
 						></div>
 					{/each}
