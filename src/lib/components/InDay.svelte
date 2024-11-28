@@ -59,11 +59,14 @@
 	});
 
 	function getEventPosition(event: Event) {
-		const [startHour] = event.startTime.split(':').map(Number);
-		const [endHour] = event.endTime.split(':').map(Number);
+		const [startHour, startMinute] = event.startTime.split(':').map(Number);
+		const [endHour, endMinute] = event.endTime.split(':').map(Number);
 
-		const top = startHour * 60 + 'px';
-		const height = (endHour - startHour) * 60 + 'px';
+		const start = startHour * 60 + startMinute;
+		const end = endHour * 60 + endMinute;
+
+		const top = start + 'px';
+		const height = Math.abs(end - start) + 'px';
 
 		return { top, height };
 	}
@@ -222,11 +225,11 @@
 				</div>
 
 				<!-- Events -->
-				<div class="pointer-events-auto absolute inset-0">
+				<div class="pointer-events-auto absolute inset-0 text-xs">
 					{#each events as event}
 						{@const position = getEventPosition(event)}
 						<div
-							class="absolute inset-x-0 overflow-hidden rounded bg-sky-600/50 p-2 text-xs text-white"
+							class="absolute flex items-center justify-center inset-x-0 overflow-hidden rounded-3xl bg-sky-600/50 px-4 text-xs text-white"
 							style="top: {position.top}; height: {position.height};"
 						>
 							<span class="block truncate">
