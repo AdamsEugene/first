@@ -54,7 +54,7 @@
 		const isHourMark = i % 4 === 0;
 		const minute = (i % 4) * 15;
 		const hour = Math.floor(i / 4);
-		const ampm = i < 12 ? 'am' : ('pm' as const);
+		const ampm = hour < 12 ? 'am' : ('pm' as const);
 		return { isHourMark, minute, hour, ampm };
 	});
 
@@ -72,9 +72,7 @@
 	}
 
 	function handleTimeClick(item: SelectedTime) {
-		const { ampm, hour, minute, week } = item;
-		if (selectedTimes) selectedTimes.push({ week, hour, minute, ampm });
-		else selectedTimes = [{ week, hour, minute, ampm }];
+		selectedTimes = [item];
 	}
 
 	function handleDragStart(item: SelectedTime) {
@@ -132,7 +130,7 @@
 
 			_selectedTimes.push({
 				week: dragStart.week,
-				hour: is24Hour ? (hour === 12 ? 12 : hour - 12) : hour === 0 ? 12 : hour,
+				hour: is24Hour ? (hour === 12 ? 12 : hour - 12) : hour === 0 ? hour : hour,
 				minute: minute,
 				ampm: is24Hour ? 'pm' : 'am'
 			});
@@ -156,8 +154,96 @@
 		)
 	);
 
+	let generateStartMiddleClass = $derived((item: SelectedTime) => {
+		if (!selectedTimes) return '';
+		if (selectedTimes.length === 1) return 'just_one';
+
+		const matchIndex = selectedTimes.findIndex(
+			(selectedTime) =>
+				selectedTime.ampm === item.ampm &&
+				selectedTime.hour === item.hour &&
+				selectedTime.minute === item.minute &&
+				selectedTime.week === item.week
+		);
+
+		if (matchIndex === -1) return '';
+		if (matchIndex === 0) return 'start';
+		if (matchIndex === selectedTimes.length - 1) return 'end';
+		return 'middle';
+	});
+
+	let paddingForTitle = $derived((item: SelectedTime) => {
+		const position = generateStartMiddleClass(item);
+
+		return (
+			{
+				start: 'rounded-tr-3xl rounded-tl-3xl',
+				end: 'rounded-br-3xl rounded-bl-3xl',
+				just_one: 'rounded-3xl',
+				middle: 'rounded-none',
+				'': 'rounded-none'
+			}[position] || 'rounded-none'
+		);
+	});
+
 	let selectedDate = $derived(selectedTimes?.[0]);
-	// $inspect(selectedDate);
+	let generatedTitle = $derived(() => {
+		if (!selectedTimes) return;
+
+		const formatTime = (time: SelectedTime) => {
+			const hour = time.hour === 0 ? 12 : time.hour;
+			const minutes = time.minute ? `: ${time.minute}` : '';
+			return `${hour}${minutes}${time.ampm}`;
+		};
+
+		const addFifteenMinutes = (time: SelectedTime): SelectedTime => {
+			let hour = parseInt(time.hour.toString());
+			let minute = time.minute + 15;
+			let ampm = time.ampm;
+
+			if (minute >= 60) {
+				minute = 0;
+				hour += 1;
+				if (hour === 12) {
+					ampm = ampm === 'am' ? 'pm' : 'am';
+				} else if (hour > 12) {
+					hour = 1;
+				}
+			}
+
+			return { ...time, hour, minute, ampm };
+		};
+
+		if (selectedTimes.length === 1) {
+			const start = selectedTimes[0];
+			const end = addFifteenMinutes(start);
+			return `(no title), ${formatTime(start)} to ${formatTime(end)}`;
+		}
+
+		const start = selectedTimes[0];
+		const lastTime = selectedTimes.at(-1)!;
+		const end = addFifteenMinutes(lastTime);
+
+		return `(no title), ${formatTime(start)} to ${formatTime(end)}`;
+	});
+
+	let isMiddleTime = $derived((time: SelectedTime) => {
+		if (!selectedTimes || selectedTimes.length <= 1) return false;
+
+		const middleIndex = Math.floor(selectedTimes.length / 2);
+		const middleTime = selectedTimes[middleIndex];
+
+		return (
+			time.hour === middleTime.hour &&
+			time.minute === middleTime.minute &&
+			time.ampm === middleTime.ampm &&
+			time.week === middleTime.week
+		);
+	});
+
+	let showTime = $derived(
+		(time: SelectedTime) => isMiddleTime(time) || generateStartMiddleClass(time) === 'just_one'
+	);
 </script>
 
 <div
@@ -204,7 +290,7 @@
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="h-[15px] border-l-2 border-t-2 text-xs
+							class="z-20 h-[15px] border-l-2 border-t-2 text-xs
                             {index === weekDays.length - 1 ? 'border-r-2' : ''}
                             {isHourMark ? 'border-t-gray-600' : 'border-t-0'}
                             {isSelectedDays({ hour, week, minute, ampm }) ? '' : ''}
@@ -215,9 +301,13 @@
 							onclick={() => handleTimeClick({ week, hour, minute, ampm })}
 						>
 							{#if isSelectedDays({ hour, week, minute, ampm })}
-								<div class="rounded-3xl bg-[#1e2c3b] px-4 text-white">
-									(no title), {hour === 0 ? 12 : hour}
-									{minute ? `: ${minute}${ampm}` : ''}
+								<div
+									class="mx-2 flex h-[15px] items-center justify-center bg-[#1e2c3b] px-4 text-white
+                                    {paddingForTitle({ week, hour, minute, ampm })}"
+								>
+									<p>
+										{showTime({ week, hour, minute, ampm }) ? generatedTitle() : ''}
+									</p>
 								</div>
 							{/if}
 						</div>
@@ -229,7 +319,7 @@
 					{#each events as event}
 						{@const position = getEventPosition(event)}
 						<div
-							class="absolute flex items-center justify-center inset-x-0 overflow-hidden rounded-3xl bg-sky-600/50 px-4 text-xs text-white"
+							class="absolute inset-x-0 z-10 flex items-center justify-center overflow-hidden rounded-3xl bg-sky-600/50 px-4 text-xs text-white"
 							style="top: {position.top}; height: {position.height};"
 						>
 							<span class="block truncate">
